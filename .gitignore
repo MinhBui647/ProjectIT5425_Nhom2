@@ -1,0 +1,18 @@
+# Python
+.venv/
+__pycache__/
+*.pyc
+
+# MinIO local artifacts (binary fallback)
+infra/bin/
+infra/minio_data/
+
+# Agent and planning docs
+AGENTS.md
+plan.md
+
+# Docs and planning material
+others/
+
+# Data files
+data/
