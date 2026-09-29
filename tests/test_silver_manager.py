@@ -366,5 +366,142 @@ class TestLegacyS1Alias:
         })
 
 
+class TestWriteSilver:
+    """Test the high-level write_silver entry point."""
+
+    @pytest.fixture
+    def bronze_root(self, tmp_path):
+        """Create an isolated Bronze vault root."""
+        root = tmp_path / "bronze"
+        root.mkdir(parents=True)
+        return str(root)
+
+    def test_write_silver_adds_lineage_and_version(self, bronze_root, tmp_path):
+        """Happy path: version increments and lineage columns are set."""
+        from lakehouse_storage.bronze_writer import write_bronze_batch
+        from lakehouse_storage.silver_manager import (
+            get_table_version,
+            read_silver_table,
+            write_silver,
+        )
+
+        df = self._create_bronze_sensor_df(10)
+        bronze_path = write_bronze_batch(
+            df, "sensor_telemetry", bronze_root=bronze_root
+        )
+        table_uri = str(tmp_path / "silver" / "sensor_telemetry")
+
+        version = write_silver(
+            df,
+            "sensor_telemetry",
+            bronze_path,
+            table_uri=table_uri,
+            bronze_root=bronze_root,
+        )
+
+        assert version == 0
+        assert get_table_version(table_uri) == 0
+
+        result = read_silver_table(table_uri)
+        assert len(result) == 10
+
+        expected_file = str(Path(bronze_path).resolve())
+        expected_sha = Path(bronze_path).with_suffix(".sha256").read_text().strip()
+        assert result["_bronze_file"].unique().to_list() == [expected_file]
+        assert result["_bronze_sha256"].unique().to_list() == [expected_sha]
+
+    def test_write_silver_empty_df_returns_minus_one(self, bronze_root, tmp_path):
+        """Empty DataFrame short-circuits without creating a Delta table."""
+        from lakehouse_storage.silver_manager import write_silver
+
+        table_uri = str(tmp_path / "silver" / "sensor_telemetry")
+        missing = Path(bronze_root) / "sensor_stream" / "2026-01-15" / "x.parquet"
+
+        version = write_silver(
+            pl.DataFrame(),
+            "sensor_telemetry",
+            missing,
+            table_uri=table_uri,
+            bronze_root=bronze_root,
+        )
+
+        assert version == -1
+        assert not Path(table_uri).exists()
+
+    def test_write_silver_missing_bronze_raises(self, bronze_root, tmp_path):
+        """Raises FileNotFoundError for a missing Bronze file inside the root."""
+        from lakehouse_storage.silver_manager import write_silver
+
+        df = self._create_bronze_sensor_df(5)
+        missing = Path(bronze_root) / "sensor_stream" / "2026-01-15" / "missing.parquet"
+
+        with pytest.raises(FileNotFoundError):
+            write_silver(
+                df,
+                "sensor_telemetry",
+                missing,
+                table_uri=str(tmp_path / "silver" / "sensor_telemetry"),
+                bronze_root=bronze_root,
+            )
+
+    def test_write_silver_checksum_mismatch_raises(self, bronze_root, tmp_path):
+        """Raises ValueError when the Bronze file no longer matches its sidecar."""
+        from lakehouse_storage.bronze_writer import write_bronze_batch
+        from lakehouse_storage.silver_manager import write_silver
+
+        df = self._create_bronze_sensor_df(5)
+        bronze_path = write_bronze_batch(
+            df, "sensor_telemetry", bronze_root=bronze_root
+        )
+        with Path(bronze_path).open("ab") as f:
+            f.write(b"tampered")
+
+        with pytest.raises(ValueError):
+            write_silver(
+                df,
+                "sensor_telemetry",
+                bronze_path,
+                table_uri=str(tmp_path / "silver" / "sensor_telemetry"),
+                bronze_root=bronze_root,
+            )
+
+    def test_write_silver_path_traversal_raises(self, bronze_root, tmp_path):
+        """Raises ValueError when source_bronze escapes bronze_root."""
+        from lakehouse_storage.silver_manager import write_silver
+
+        df = self._create_bronze_sensor_df(5)
+        outside = tmp_path / "outside.parquet"
+
+        with pytest.raises(ValueError):
+            write_silver(
+                df,
+                "sensor_telemetry",
+                outside,
+                table_uri=str(tmp_path / "silver" / "sensor_telemetry"),
+                bronze_root=bronze_root,
+            )
+
+    # Helper methods
+    def _create_bronze_sensor_df(self, n_rows: int) -> pl.DataFrame:
+        """Create a raw Bronze sensor_telemetry DataFrame."""
+        base_time = datetime(2026, 1, 15, 10, 0, 0)
+        timestamps = [base_time.isoformat() for _ in range(n_rows)]
+
+        return pl.DataFrame({
+            "timestamp": timestamps,
+            "line_id": ["LINE_UHT_1"] * n_rows,
+            "batch_id": [None] * n_rows,
+            "preheat_temp": np.random.normal(75.0, 2.0, n_rows).tolist(),
+            "uht_temp": np.random.normal(138.5, 0.7, n_rows).tolist(),
+            "homo_press_stage1": np.random.normal(200.0, 5.0, n_rows).tolist(),
+            "homo_press_stage2": np.random.normal(30.0, 2.0, n_rows).tolist(),
+            "flow_rate": np.random.normal(5000.0, 50.0, n_rows).tolist(),
+            "conductivity": np.random.normal(4.5, 0.1, n_rows).tolist(),
+            "power_kw": np.random.normal(150.0, 5.0, n_rows).tolist(),
+            "_source_system": ["TEST"] * n_rows,
+            "_generated_at": [datetime.now(timezone.utc).isoformat()] * n_rows,
+        })
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

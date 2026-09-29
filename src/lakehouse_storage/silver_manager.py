@@ -10,7 +10,12 @@ from deltalake import DeltaTable, write_deltalake
 
 from lakehouse_storage.bronze_writer import ensure_within_bronze, verify_checksum
 from lakehouse_storage.config import TIMEZONE, get_storage_options
-from lakehouse_storage.schemas import get_silver_schema, normalize_table_name
+from lakehouse_storage.schemas import (
+    get_partition_columns,
+    get_silver_schema,
+    get_silver_table_uri,
+    normalize_table_name,
+)
 from lakehouse_storage.utils import sha256_file
 
 logger = logging.getLogger(__name__)
@@ -81,6 +86,21 @@ def append_to_delta(
     logger.info("Appended %d rows to %s", silver_df.height, table_uri)
 
 
+def _verified_bronze_sha256(bronze_path: Path, enforce_checksum: bool) -> str:
+    """Return the SHA-256 to record as lineage, reusing the verified sidecar.
+
+    Verifying the sidecar already hashes the Parquet; reading the digest back
+    avoids a second full read of the Bronze file.
+    """
+    if enforce_checksum:
+        if not verify_checksum(bronze_path):
+            raise ValueError(
+                f"Checksum verification failed for Bronze file: {bronze_path}"
+            )
+        return bronze_path.with_suffix(".sha256").read_text().strip()
+    return sha256_file(bronze_path)
+
+
 def ingest_bronze_file(
     bronze_path: str | Path,
     silver_table_uri: str,
@@ -97,10 +117,7 @@ def ingest_bronze_file(
     if not bronze_path.exists():
         raise FileNotFoundError(f"Bronze file not found: {bronze_path}")
 
-    if enforce_checksum and not verify_checksum(bronze_path):
-        raise ValueError(f"Checksum verification failed for Bronze file: {bronze_path}")
-
-    sha256 = sha256_file(bronze_path)
+    sha256 = _verified_bronze_sha256(bronze_path, enforce_checksum)
     df = pl.read_parquet(bronze_path)
 
     # Add lineage columns
@@ -373,3 +390,71 @@ def create_delta_table(
         storage_options=get_storage_options(),
     )
     logger.info("Created Delta table: %s", table_uri)
+
+
+def write_silver(
+    df: pl.DataFrame,
+    table_name: str,
+    source_bronze: str | Path,
+    table_uri: str | None = None,
+    bronze_root: Path | str | None = None,
+    enforce_checksum: bool = True,
+) -> int:
+    """Write a preprocessed DataFrame to Silver (Delta Lake on MinIO).
+    Args:
+        df: Preprocessed :class:`polars.DataFrame` ready for Silver ingestion
+        table_name: Canonical table name or S1-S5 alias.
+        source_bronze: Path to the Bronze file from which *df* was originally read.
+        table_uri: Explicit Delta table URI.  When ``None``, resolved automatically
+        bronze_root: When provided, *source_bronze* must stay within this root.
+        enforce_checksum: Verify the Bronze ``.sha256`` sidecar before processing.
+    Returns:
+        Delta table version after the write, or ``-1`` when *df* is empty.
+    Raises:
+        ValueError: If *table_name* is unknown, *df* fails schema enforcement
+            inside ``append_to_delta``, the path escapes *bronze_root*, or the
+            Bronze checksum does not match.
+        FileNotFoundError: If *source_bronze* does not exist.
+    """
+    table_name = normalize_table_name(table_name)
+    source_bronze = Path(source_bronze)
+
+    if bronze_root is not None:
+        source_bronze = ensure_within_bronze(source_bronze, bronze_root)
+
+    if df.is_empty():
+        logger.warning("write_silver: DataFrame is empty, skipping.")
+        return -1
+
+    if not source_bronze.exists():
+        raise FileNotFoundError(
+            f"Source Bronze file not found: {source_bronze}"
+        )
+
+    if table_uri is None:
+        table_uri = get_silver_table_uri(table_name)
+
+    partition_by = get_partition_columns(table_name)
+
+    # Add lineage columns - same pattern as ingest_bronze_file()
+    sha256 = _verified_bronze_sha256(source_bronze, enforce_checksum)
+    df = df.with_columns([
+        pl.lit(str(source_bronze)).alias("_bronze_file"),
+        pl.lit(sha256).alias("_bronze_sha256"),
+    ])
+
+    append_to_delta(
+        df=df,
+        table_uri=table_uri,
+        partition_by=partition_by,
+        table_name=table_name,
+    )
+
+    version = get_table_version(table_uri)
+
+    logger.info(
+        "write_silver: %d rows -> %s (v%d) from %s",
+        df.height, table_uri, version, source_bronze,
+    )
+
+    return version

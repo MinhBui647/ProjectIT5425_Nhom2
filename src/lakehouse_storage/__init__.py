@@ -82,6 +82,7 @@ from lakehouse_storage.silver_manager import (
     get_table_stats,
     delete_from_delta,
     create_delta_table,
+    write_silver,
 )
 
 from lakehouse_storage.time_travel import (
@@ -179,6 +180,7 @@ __all__ = [
     "get_table_stats",
     "delete_from_delta",
     "create_delta_table",
+    "write_silver",
     # Time Travel
     "load_version",
     "get_table_history",
