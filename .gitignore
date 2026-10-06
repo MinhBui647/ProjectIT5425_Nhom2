@@ -16,3 +16,7 @@ others/
 
 # Data files
 data/
+
+# Dev
+.local
+.pytest-tmp
