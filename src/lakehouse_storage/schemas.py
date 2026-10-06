@@ -200,12 +200,10 @@ WEATHER_SCHEMA = pa.schema([
 BRONZE_WEATHER_SCHEMA = pa.schema([
     pa.field("farm_id", pa.string(), nullable=False),
     pa.field("observed_at", pa.string(), nullable=False),
-    pa.field("temperature_c", pa.float64(), nullable=True),
+    pa.field("temperature_celsius", pa.float64(), nullable=True),
     pa.field("relative_humidity_pct", pa.float64(), nullable=True),
     pa.field("precipitation_mm", pa.float64(), nullable=True),
-    pa.field("ingested_at", pa.string(), nullable=False),
-    pa.field("_source_system", pa.string(), nullable=False),
-    pa.field("_generated_at", pa.string(), nullable=False),
+    pa.field("_created_at", pa.string(), nullable=False),
 ])
 
 # =============================================================================
@@ -225,16 +223,37 @@ FOOD_RECALLS_SCHEMA = pa.schema([
 
 # Bronze version
 BRONZE_FOOD_RECALLS_SCHEMA = pa.schema([
-    pa.field("source", pa.string(), nullable=False),
-    pa.field("recall_id", pa.string(), nullable=False),
-    pa.field("published_at", pa.string(), nullable=False),
-    pa.field("product", pa.string(), nullable=True),
-    pa.field("reason", pa.string(), nullable=True),
-    pa.field("status", pa.string(), nullable=True),
-    pa.field("source_url", pa.string(), nullable=True),
-    pa.field("ingested_at", pa.string(), nullable=False),
-    pa.field("_source_system", pa.string(), nullable=False),
-    pa.field("_generated_at", pa.string(), nullable=False),
+    pa.field("status", pa.string(), nullable=False),
+    pa.field("city", pa.string(), nullable=False),
+    pa.field("state", pa.string(), nullable=False),
+    pa.field("country", pa.string(), nullable=False),
+    pa.field("classification", pa.string(), nullable=False),
+    pa.field("openfda", pa.string(), nullable=False),
+    pa.field("product_type", pa.string(), nullable=False),
+    pa.field("event_id", pa.string(), nullable=False),
+    pa.field("recalling_firm", pa.string(), nullable=False),
+    pa.field("address_1", pa.string(), nullable=False),
+    pa.field("address_2", pa.string(), nullable=False),
+    pa.field("postal_code", pa.string(), nullable=False),
+    pa.field("voluntary_mandated", pa.string(), nullable=False),
+    pa.field("initial_firm_notification", pa.string(), nullable=False),
+    pa.field("distribution_pattern", pa.string(), nullable=False),
+    pa.field("recall_number", pa.string(), nullable=False),
+    pa.field("product_description", pa.string(), nullable=False),
+    pa.field("product_quantity", pa.string(), nullable=False),
+    pa.field("reason_for_recall", pa.string(), nullable=False),
+    pa.field("recall_initiation_date", pa.string(), nullable=False),
+    pa.field("center_classification_date", pa.string(), nullable=False),
+    pa.field("termination_date", pa.string(), nullable=False),
+    pa.field("report_date", pa.string(), nullable=False),
+    pa.field("code_info", pa.string(), nullable=False),
+    pa.field("more_code_info", pa.string(), nullable=False),
+    pa.field("meta_last_updated", pa.string(), nullable=False),
+    pa.field("meta_results_skip", pa.string(), nullable=False),
+    pa.field("meta_results_limit", pa.string(), nullable=False),
+    pa.field("meta_results_total", pa.string(), nullable=False),
+    pa.field("_expected_total", pa.string(), nullable=False),
+    pa.field("_created_at", pa.string(), nullable=False),
 ])
 
 # =============================================================================
