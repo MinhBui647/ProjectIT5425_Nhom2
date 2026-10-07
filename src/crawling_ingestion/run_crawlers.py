@@ -2,8 +2,8 @@
 import argparse
 from pathlib import Path
 
-import polars as pl
-from lakehouse_storage import FARM_LOCATIONS, write_bronze_batch
+from lakehouse_storage import FARM_LOCATIONS
+from crawling_ingestion.dedup import write_unique_bronze
 from crawling_ingestion._http import date_range
 from crawling_ingestion.openmeteo import get_openmeteo_weather_data
 from crawling_ingestion.openfda import get_openfda_foodrecall_data
@@ -21,14 +21,16 @@ def _write_daily(df, table_name, date_column, bronze_root):
     if df.is_empty():
         print(f"{table_name}: no records in the selected range")
         return []
-    # GDT/FDA source schemas have different date-column names.
-    days = df[date_column].str.slice(0, 10).unique().sort().to_list()
-    paths = []
-    for day in days:
-        batch = df.filter(pl.col(date_column).str.slice(0, 10) == day)
-        paths.append(write_bronze_batch(batch, table_name, bronze_root=bronze_root))
-    print(f"{table_name}: {len(df)} rows -> {len(paths)} Bronze files")
-    return paths
+    result = write_unique_bronze(df, table_name, bronze_root)
+    print(
+        f"{table_name}: received={result['input_rows']}, "
+        f"written={result['written_rows']} (new={result['new_rows']}, "
+        f"revised={result['revised_rows']}), "
+        f"skipped={result['unchanged_rows'] + result['batch_duplicates']} "
+        f"-> {len(result['paths'])} Bronze files"
+    )
+    return result["paths"]
+
 
 
 def run_crawlers(start_date="2025-01-01", end_date="2025-02-01",
