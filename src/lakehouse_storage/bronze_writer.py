@@ -18,12 +18,14 @@ logger = logging.getLogger(__name__)
 
 # Columns to use for date extraction per table
 DATE_COLUMNS = {
+    "usda_market_prices": ["observed_at"],
+    # Raw GDT and FDA schemas use the original source date fields.
     "sensor_telemetry": ["timestamp"],
     "mes_lims": ["production_start"],
-    "market_prices": ["observed_at"],
+    "market_prices": ["observed_at", "EventDate"],
     "market_indices": ["period_start"],
     "weather": ["observed_at"],
-    "food_recalls": ["published_at"],
+    "food_recalls": ["published_at", "report_date"],
     "bronze_metadata": ["fetched_at"],
 }
 
@@ -211,6 +213,8 @@ def _extract_date(df: pl.DataFrame, table_name: str) -> date:
         first = non_null[0]
 
         if isinstance(first, str):
+            if len(first) == 8 and first.isdigit():
+                return datetime.strptime(first, "%Y%m%d").date()
             try:
                 # Try ISO format first
                 return datetime.fromisoformat(first.replace("Z", "+00:00")).date()

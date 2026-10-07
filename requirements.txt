@@ -10,3 +10,6 @@ numpy>=1.24.0,<2.0.0
 pytest>=8.0.0
 pytest-cov>=4.1.0
 
+
+# HTTP crawlers
+requests>=2.32.0,<3

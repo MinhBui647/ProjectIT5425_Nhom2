@@ -288,7 +288,29 @@ BRONZE_METADATA_RAW_SCHEMA = pa.schema([
 # Schema Registry
 # =============================================================================
 
+BRONZE_USDA_MARKET_PRICES_SCHEMA = pa.schema([
+    pa.field("source", pa.string(), nullable=False),
+    pa.field("product", pa.string(), nullable=False),
+    pa.field("contract", pa.string(), nullable=True),
+    pa.field("observed_at", pa.string(), nullable=False),
+    pa.field("price", pa.float64(), nullable=True),
+    pa.field("currency", pa.string(), nullable=False),
+    pa.field("unit", pa.string(), nullable=True),
+    pa.field("ingested_at", pa.string(), nullable=False),
+    pa.field("_source_system", pa.string(), nullable=False),
+    pa.field("_generated_at", pa.string(), nullable=False),
+])
+
 SCHEMA_REGISTRY = {
+    "usda_market_prices": {
+        "source_name": "usda_market_prices",
+        "table_name": "market_prices",
+        "bronze": BRONZE_USDA_MARKET_PRICES_SCHEMA,
+        "silver": MARKET_PRICES_SCHEMA,
+        "partition": PARTITION_COLUMNS["market_prices"],
+        "id_column": "observed_at",
+        "description": "USDA NDPSR weekly prices (USD/lb), separate raw schema from GDT",
+    },
     "sensor_telemetry": {
         "source_name": "sensor_telemetry",
         "table_name": "sensor_telemetry",

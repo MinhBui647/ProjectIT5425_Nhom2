@@ -1,128 +1,89 @@
-from datetime import datetime
+"""Run selected crawlers and write daily Parquet + SHA-256 batches locally."""
+import argparse
+from pathlib import Path
 
-from lakehouse_storage import (
-    config as LakehouseConfig,
-    FARM_LOCATIONS,
-    write_bronze_batch,
-)
+import polars as pl
+from lakehouse_storage import FARM_LOCATIONS, write_bronze_batch
+from crawling_ingestion._http import date_range
 from crawling_ingestion.openmeteo import get_openmeteo_weather_data
 from crawling_ingestion.openfda import get_openfda_foodrecall_data
 from crawling_ingestion.gdt import get_gdt_marketprice_data
+from crawling_ingestion.usda import get_usda_marketprice_data
+from crawling_ingestion.fao import get_fao_dairyindex_data
+
+TABLE_BASE_URI = Path(__file__).resolve().parents[2] / "data" / "01_bronze_vault"
+SOURCES = ("openmeteo", "openfda", "gdt", "usda", "fao")
 
 
-
-# Cai nay se chuyen sang folder utils chung sau nay
-def check_minio_connection():
-    import boto3
-    from botocore.config import Config
-
-    endpoint = f"http://{LakehouseConfig.MINIO_ENDPOINT}"
-    access_key = LakehouseConfig.MINIO_ACCESS_KEY
-    secret_key = LakehouseConfig.MINIO_SECRET_KEY
-    bucket = LakehouseConfig.MINIO_BUCKET
-    
-    print(f"Get lakehouse config done")
-
-    try:
-        s3 = boto3.client(
-            "s3",
-            endpoint_url=endpoint,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            config=Config(signature_version="s3v4"),
-        )
-        
-        try:
-            # Check if exists
-            s3.head_bucket(Bucket=bucket)
-            print(f"Bucket '{bucket}' exists!")
-        except Exception:
-            # If not -> create
-            print(f"Bucket '{bucket}' not found, creating...")
-            s3.create_bucket(Bucket=bucket)
-            print(f"Created bucket '{bucket}'")
-
-        return True
-
-    except Exception as e:
-        print(f"ERROR: {e}")
-        return False
+def _write_daily(df, table_name, date_column, bronze_root):
+    if df is None:
+        raise RuntimeError(f"Crawler returned no response for {table_name}")
+    if df.is_empty():
+        print(f"{table_name}: no records in the selected range")
+        return []
+    # GDT/FDA source schemas have different date-column names.
+    days = df[date_column].str.slice(0, 10).unique().sort().to_list()
+    paths = []
+    for day in days:
+        batch = df.filter(pl.col(date_column).str.slice(0, 10) == day)
+        paths.append(write_bronze_batch(batch, table_name, bronze_root=bronze_root))
+    print(f"{table_name}: {len(df)} rows -> {len(paths)} Bronze files")
+    return paths
 
 
+def run_crawlers(start_date="2025-01-01", end_date="2025-02-01",
+                 sources=None, bronze_root=None):
+    first, last = date_range(start_date, end_date)
+    selected = list(SOURCES) if sources is None else list(sources)
+    if not selected or len(set(selected)) != len(selected) or set(selected) - set(SOURCES):
+        raise ValueError(f"sources must contain unique values from {SOURCES}")
+    root = TABLE_BASE_URI if bronze_root is None else bronze_root
+    if str(root).startswith("s3://"):
+        raise ValueError("The current Bronze writer supports local paths only")
+    paths = []
+    for source in selected:
+        if source == "openmeteo":
+            for farm_id, location in FARM_LOCATIONS.items():
+                df = get_openmeteo_weather_data(farm_id, location["lat"], location["lon"], start_date, end_date)
+                paths += _write_daily(df, "weather", "observed_at", root)
+        elif source == "openfda":
+            # Existing crawler uses expected_total to decide how many pages to fetch.
+            from crawling_ingestion._http import get_response
+            from urllib.parse import urlencode
+            query = f"report_date:[{first:%Y%m%d} TO {last:%Y%m%d}]"
+            response = get_response("https://api.fda.gov/food/enforcement.json?" + urlencode({"search": query, "limit": 1}), "openfda")
+            try:
+                total = int(response.json()["meta"]["results"]["total"])
+            finally:
+                response.close()
+            if total > 26000:
+                raise ValueError("openFDA range exceeds skip limit; select a shorter date range")
+            dfs = get_openfda_foodrecall_data(f"{first:%Y%m%d}", f"{last:%Y%m%d}", total)
+            if sum(len(df) for df in dfs) != total:
+                raise RuntimeError("openFDA returned incomplete results")
+            for df in dfs:
+                paths += _write_daily(df, "food_recalls", "report_date", root)
+        elif source == "gdt":
+            df = get_gdt_marketprice_data(start_date, end_date, ["AMF", "SMP", "WMP"])
+            paths += _write_daily(df, "market_prices", "EventDate", root)
+        elif source == "usda":
+            df = get_usda_marketprice_data(start_date, end_date)
+            paths += _write_daily(df, "usda_market_prices", "observed_at", root)
+        elif source == "fao":
+            df = get_fao_dairyindex_data(start_date, end_date)
+            paths += _write_daily(df, "market_indices", "period_start", root)
+    return paths
 
-# CONFIG
 
-# TODO: Se thay local path bang minio path sau khi test crawl cac source xong
-# Local folder path
-TABLE_BASE_URI = f"../data/01_bronze_vault"
-# MinIO path
-# TABLE_BASE_URI = f"s3://{LakehouseConfig.MINIO_BUCKET}/01_bronze_vault/"
-
-START_DATE = datetime(2025, 1, 1)
-END_DATE = datetime(2025, 2, 1)
-
-
-def run_crawlers():
-    
-    # TODO: Dang hardcode cac table_name -> co the update sau
-    
-    # 1. OpenMeteo
-    openmeteo_table_name = "weather"
-    
-    for farm_id, location in FARM_LOCATIONS.items():
-        df = get_openmeteo_weather_data(
-            farm_id=farm_id,
-            latitude=location["lat"],
-            longitude=location["lon"],
-            start_date=START_DATE.strftime("%Y-%m-%d"),
-            end_date=END_DATE.strftime("%Y-%m-%d"),
-        )
-        write_bronze_batch(
-            df=df, 
-            table_name=openmeteo_table_name,
-            bronze_root=TABLE_BASE_URI,
-        )
-    
-    
-    # 2. OpenFDA
-    openfda_table_name = "food_recalls"
-    
-    openfda_dfs = get_openfda_foodrecall_data(
-        start_date=START_DATE.strftime("%Y%m%d"),
-        end_date=END_DATE.strftime("%Y%m%d"),
-        expected_total=7
-    )
-    
-    for df in openfda_dfs:
-        write_bronze_batch(
-            df=df,
-            table_name=openfda_table_name,
-            bronze_root=TABLE_BASE_URI,
-        )
-    
-    
-    # 3. GDT
-    # TODO: Dinh nghia lai cac `product_codes` se crawl o trong lakehouse
-    gdt_table_name = "market_prices"
-    
-    gdt_df = get_gdt_marketprice_data(
-        start_date=START_DATE.strftime("%Y-%m-%d"),
-        end_date=END_DATE.strftime("%Y-%m-%d"),
-        product_codes=["AMF", "SMP", "WMP"]
-    )
-    
-    write_bronze_batch(
-        df=gdt_df,
-        table_name=gdt_table_name,
-        bronze_root=TABLE_BASE_URI,
-    )
-    
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--start-date", default="2025-01-01")
+    parser.add_argument("--end-date", default="2025-02-01")
+    parser.add_argument("--sources", nargs="+", choices=SOURCES, default=list(SOURCES))
+    parser.add_argument("--bronze-root", type=Path, default=TABLE_BASE_URI)
+    args = parser.parse_args()
+    run_crawlers(args.start_date, args.end_date, args.sources, args.bronze_root)
 
 
 if __name__ == "__main__":
-    # Check connection
-    isMinioConnected = check_minio_connection()
-
-    # Run all the crawlers 
-    if isMinioConnected:
-        run_crawlers()
+    main()
