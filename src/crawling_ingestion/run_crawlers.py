@@ -7,6 +7,7 @@ from lakehouse_storage import (
 )
 from crawling_ingestion.openmeteo import get_openmeteo_weather_data
 from crawling_ingestion.openfda import get_openfda_foodrecall_data
+from crawling_ingestion.gdt import get_gdt_marketprice_data
 
 
 
@@ -58,7 +59,7 @@ TABLE_BASE_URI = f"../data/01_bronze_vault"
 # TABLE_BASE_URI = f"s3://{LakehouseConfig.MINIO_BUCKET}/01_bronze_vault/"
 
 START_DATE = datetime(2025, 1, 1)
-END_DATE = datetime(2025, 1, 7)
+END_DATE = datetime(2025, 2, 1)
 
 
 def run_crawlers():
@@ -100,7 +101,21 @@ def run_crawlers():
         )
     
     
+    # 3. GDT
+    # TODO: Dinh nghia lai cac `product_codes` se crawl o trong lakehouse
+    gdt_table_name = "market_prices"
     
+    gdt_df = get_gdt_marketprice_data(
+        start_date=START_DATE.strftime("%Y-%m-%d"),
+        end_date=END_DATE.strftime("%Y-%m-%d"),
+        product_codes=["AMF", "SMP", "WMP"]
+    )
+    
+    write_bronze_batch(
+        df=gdt_df,
+        table_name=gdt_table_name,
+        bronze_root=TABLE_BASE_URI,
+    )
     
 
 

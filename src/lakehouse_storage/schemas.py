@@ -146,16 +146,15 @@ MARKET_PRICES_SCHEMA = pa.schema([
 
 # Bronze version
 BRONZE_MARKET_PRICES_SCHEMA = pa.schema([
-    pa.field("source", pa.string(), nullable=False),
-    pa.field("product", pa.string(), nullable=False),
-    pa.field("contract", pa.string(), nullable=True),
-    pa.field("observed_at", pa.string(), nullable=False),
-    pa.field("price", pa.float64(), nullable=True),
-    pa.field("currency", pa.string(), nullable=False),
-    pa.field("unit", pa.string(), nullable=True),
-    pa.field("ingested_at", pa.string(), nullable=False),
-    pa.field("_source_system", pa.string(), nullable=False),
-    pa.field("_generated_at", pa.string(), nullable=False),
+    pa.field("EventNumber", pa.string(), nullable=False),
+    pa.field("EventDate", pa.string(), nullable=False),
+    pa.field("ProductGroupGUID", pa.string(), nullable=False),
+    pa.field("ProductGroupName", pa.string(), nullable=False),
+    pa.field("PriceIndexPercentageChange", pa.string(), nullable=False),
+    pa.field("AveragePublishedPrice", pa.string(), nullable=False),
+
+    pa.field("ProductGroupCode", pa.string(), nullable=False),
+    pa.field("_created_at", pa.string(), nullable=False),
 ])
 
 # =============================================================================
