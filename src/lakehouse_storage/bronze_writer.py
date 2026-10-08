@@ -20,10 +20,11 @@ logger = logging.getLogger(__name__)
 DATE_COLUMNS = {
     "sensor_telemetry": ["timestamp"],
     "mes_lims": ["production_start"],
-    "market_prices": ["observed_at"],
-    "market_indices": ["period_start"],
+    "market_prices": ["EventDate"],
+    "market_reports": ["published_date"],
+    "market_indices": ["Month"],
     "weather": ["observed_at"],
-    "food_recalls": ["published_at"],
+    "food_recalls": ["report_date"],
     "bronze_metadata": ["fetched_at"],
 }
 

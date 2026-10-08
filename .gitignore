@@ -1,7 +1,27 @@
-# Python
+# Python environments and bytecode
 .venv/
+.venv*/
+venv/
 __pycache__/
-*.pyc
+*.py[cod]
+
+# Test, coverage and tool caches
+.pytest_cache/
+.pytest-*/
+.coverage
+.coverage.*
+htmlcov/
+coverage.xml
+.mypy_cache/
+.ruff_cache/
+.tox/
+.nox/
+.ipynb_checkpoints/
+
+# Build artifacts
+/build/
+/dist/
+*.egg-info/
 
 # MinIO local artifacts (binary fallback)
 infra/bin/
@@ -14,9 +34,22 @@ plan.md
 # Docs and planning material
 others/
 
-# Data files
+# Generated datasets: raw JSON, Bronze Parquet/checksums, exports
+# Keep source/config JSON and CSV outside data/ eligible for version control.
 data/
 
-# Dev
+# Temporary dependencies, logs and local settings
+/tmp/
+/logs/
+*.log
 .local
-.pytest-tmp
+
+# Local environment settings; retain the shareable template
+.env
+.env.*
+!.env.example
+
+# OS-generated files
+.DS_Store
+Thumbs.db
+Desktop.ini

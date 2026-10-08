@@ -1,74 +1,41 @@
 from datetime import datetime
 
 from lakehouse_storage import (
-    config as LakehouseConfig,
-    FARM_LOCATIONS,
+    FARM_LOCATIONS, GDT_PRODUCT_CODES, USDA_REPORT_KEYWORD,
     write_bronze_batch,
 )
+from crawling_ingestion.utils import define_table_base_uri, check_minio_connection
 from crawling_ingestion.openmeteo import get_openmeteo_weather_data
 from crawling_ingestion.openfda import get_openfda_foodrecall_data
 from crawling_ingestion.gdt import get_gdt_marketprice_data
+from crawling_ingestion.fao import get_fao_marketindices_data
+from crawling_ingestion.usda import get_usda_marketreports_data
 
 
-
-# Cai nay se chuyen sang folder utils chung sau nay
-def check_minio_connection():
-    import boto3
-    from botocore.config import Config
-
-    endpoint = f"http://{LakehouseConfig.MINIO_ENDPOINT}"
-    access_key = LakehouseConfig.MINIO_ACCESS_KEY
-    secret_key = LakehouseConfig.MINIO_SECRET_KEY
-    bucket = LakehouseConfig.MINIO_BUCKET
-    
-    print(f"Get lakehouse config done")
-
-    try:
-        s3 = boto3.client(
-            "s3",
-            endpoint_url=endpoint,
-            aws_access_key_id=access_key,
-            aws_secret_access_key=secret_key,
-            config=Config(signature_version="s3v4"),
-        )
-        
-        try:
-            # Check if exists
-            s3.head_bucket(Bucket=bucket)
-            print(f"Bucket '{bucket}' exists!")
-        except Exception:
-            # If not -> create
-            print(f"Bucket '{bucket}' not found, creating...")
-            s3.create_bucket(Bucket=bucket)
-            print(f"Created bucket '{bucket}'")
-
-        return True
-
-    except Exception as e:
-        print(f"ERROR: {e}")
-        return False
-
+# TODO: Chuyen sang True de chay flow cho production
+PRODUCTION_ENV = False
 
 
 # CONFIG
+TABLE_BASE_URI = define_table_base_uri(PRODUCTION_ENV)
 
-# TODO: Se thay local path bang minio path sau khi test crawl cac source xong
-# Local folder path
-TABLE_BASE_URI = f"../data/01_bronze_vault"
-# MinIO path
-# TABLE_BASE_URI = f"s3://{LakehouseConfig.MINIO_BUCKET}/01_bronze_vault/"
-
+# TODO: Hardcode start - end date to test
 START_DATE = datetime(2025, 1, 1)
 END_DATE = datetime(2025, 2, 1)
 
 
+
 def run_crawlers():
-    
-    # TODO: Dang hardcode cac table_name -> co the update sau
+    # NOTE: Map from source name to schema name (lakehouse_storage/schema.py)
+    TABLE_NAMES = {
+        "openmeteo": "weather",
+        "openfda": "food_recalls",
+        "gdt": "market_prices",
+        "fao": "market_indices",
+        "usda": "market_reports",
+    }
     
     # 1. OpenMeteo
-    openmeteo_table_name = "weather"
-    
     for farm_id, location in FARM_LOCATIONS.items():
         df = get_openmeteo_weather_data(
             farm_id=farm_id,
@@ -79,14 +46,12 @@ def run_crawlers():
         )
         write_bronze_batch(
             df=df, 
-            table_name=openmeteo_table_name,
+            table_name=TABLE_NAMES["openmeteo"],
             bronze_root=TABLE_BASE_URI,
         )
     
     
     # 2. OpenFDA
-    openfda_table_name = "food_recalls"
-    
     openfda_dfs = get_openfda_foodrecall_data(
         start_date=START_DATE.strftime("%Y%m%d"),
         end_date=END_DATE.strftime("%Y%m%d"),
@@ -96,32 +61,63 @@ def run_crawlers():
     for df in openfda_dfs:
         write_bronze_batch(
             df=df,
-            table_name=openfda_table_name,
+            table_name=TABLE_NAMES["openfda"],
             bronze_root=TABLE_BASE_URI,
         )
     
     
     # 3. GDT
-    # TODO: Dinh nghia lai cac `product_codes` se crawl o trong lakehouse
-    gdt_table_name = "market_prices"
-    
     gdt_df = get_gdt_marketprice_data(
         start_date=START_DATE.strftime("%Y-%m-%d"),
         end_date=END_DATE.strftime("%Y-%m-%d"),
-        product_codes=["AMF", "SMP", "WMP"]
+        product_codes=GDT_PRODUCT_CODES
     )
     
     write_bronze_batch(
         df=gdt_df,
-        table_name=gdt_table_name,
+        table_name=TABLE_NAMES["gdt"],
         bronze_root=TABLE_BASE_URI,
     )
     
+    
+    # 4. FAO
+    fao_df = get_fao_marketindices_data(
+        start_date=START_DATE.strftime("%Y-%m-%d"),
+        end_date=END_DATE.strftime("%Y-%m-%d"),
+    )
+    
+    write_bronze_batch(
+        df=fao_df,
+        table_name=TABLE_NAMES["fao"],
+        bronze_root=TABLE_BASE_URI,
+    )
+    
+    
+    # 5. USDA
+    usda_dfs = get_usda_marketreports_data(
+        start_date=START_DATE.strftime("%Y-%m-%d"),
+        end_date=END_DATE.strftime("%Y-%m-%d"),
+        keyword=USDA_REPORT_KEYWORD
+    )
+    
+    for df in usda_dfs:
+        # NOTE: Do API response k dong nhat (moi df mot schema khac nhau) -> k check schema -> xu ly sau o silver
+        # TODO: Schema trong lakehouse_storage/schemas.py cua table nay dang de tam placeholder
+        write_bronze_batch(
+            df=df,
+            table_name=TABLE_NAMES["usda"],
+            bronze_root=TABLE_BASE_URI,
+            validate_schema=False
+        )
+
 
 
 if __name__ == "__main__":
     # Check connection
-    isMinioConnected = check_minio_connection()
+    if PRODUCTION_ENV:
+        isMinioConnected = check_minio_connection()
+    else:
+        isMinioConnected = True
 
     # Run all the crawlers 
     if isMinioConnected:

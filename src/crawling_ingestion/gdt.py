@@ -1,8 +1,8 @@
-import math
-import json
 import polars as pl
 import requests
 from datetime import datetime
+
+from crawling_ingestion.utils import datetime_validate_range, datetime_now_utc
 
 
 GDT_BASE_API = f"https://s3.amazonaws.com/www-production.globaldairytrade.info/results"
@@ -55,8 +55,8 @@ def get_gdt_events(start_date: str, end_date: str,):
         tuple: (events, event_checkpoint_guids)
     """
     
-    dt_start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    dt_end_date = datetime.strptime(end_date, "%Y-%m-%d")
+    dt_start_date, dt_end_date = datetime_validate_range(start_date, end_date)
+
     events = []
     event_checkpoint_guids = []
     isOlder = True # Check if need to searching older events
@@ -126,8 +126,8 @@ def get_gdt_marketprice_data(
         Dict | None
     """
     
-    dt_start_date = datetime.strptime(start_date, "%Y-%m-%d")
-    dt_end_date = datetime.strptime(end_date, "%Y-%m-%d")
+    dt_start_date, dt_end_date = datetime_validate_range(start_date, end_date)
+    
     winning_prices = []
 
     # Get latest event
@@ -182,7 +182,8 @@ def get_gdt_marketprice_data(
         
     df = pl.DataFrame(winning_prices)
     df = df.with_columns([
-        pl.lit(datetime.now().strftime("%Y-%m-%d")).alias("_created_at"),
+        pl.lit(GDT_BASE_API).alias("_base_api"),
+        pl.lit(datetime_now_utc()).alias("_created_at"),
     ])
     
     return df

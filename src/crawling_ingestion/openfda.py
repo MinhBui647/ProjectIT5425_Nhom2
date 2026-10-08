@@ -2,7 +2,10 @@ import math
 import json
 import polars as pl
 import requests
-from datetime import datetime
+
+from crawling_ingestion.utils import datetime_validate_range, datetime_now_utc
+
+OPENFDA_BASE_API = "https://api.fda.gov/food/enforcement.json"
 
 # API query note: limit <= 1000, skip <= 25000
 OPENFDA_MAX_QUERY_LIMIT = 1000
@@ -24,7 +27,9 @@ def get_openfda_foodrecall_data(
         Dict | None
     """
     
-    openfda_api = f"https://api.fda.gov/food/enforcement.json?search=report_date:[{start_date}+TO+{end_date}]"
+    _s, _e = datetime_validate_range(start_date, end_date)
+    
+    openfda_api = f"{OPENFDA_BASE_API}?search=report_date:[{start_date}+TO+{end_date}]"
     pages = math.ceil(expected_total / OPENFDA_MAX_QUERY_LIMIT) 
     dfs = []
     
@@ -52,8 +57,9 @@ def get_openfda_foodrecall_data(
                 pl.lit(data["meta"]["results"]["total"]).alias("meta_results_total"),
                 
                 # Additional context
+                pl.lit(OPENFDA_BASE_API).alias("_base_api"),
                 pl.lit(expected_total).alias("_expected_total"),
-                pl.lit(datetime.now().strftime("%Y-%m-%d")).alias("_created_at"),
+                pl.lit(datetime_now_utc()).alias("_created_at"),
             ])
             
             # Handle specific column

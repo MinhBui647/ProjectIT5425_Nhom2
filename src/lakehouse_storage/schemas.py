@@ -61,6 +61,14 @@ FARM_LOCATIONS = {
 
 THI_THRESHOLD_STRESS = 72.0
 
+
+# GDT (market_prices) product codes
+GDT_PRODUCT_CODES = ["AMF", "SMP", "WMP"]
+
+# USDA keyword to filter reports
+USDA_REPORT_KEYWORD = "dairy"
+
+
 # =============================================================================
 # Table 1: sensor_telemetry (IoT Sensor Readings)
 # =============================================================================
@@ -130,7 +138,7 @@ BRONZE_MES_LIMS_SCHEMA = pa.schema([
 ])
 
 # =============================================================================
-# Table 3: market_prices (International Commodity Prices)
+# Table 3: market_prices (GDT)
 # =============================================================================
 
 MARKET_PRICES_SCHEMA = pa.schema([
@@ -154,11 +162,12 @@ BRONZE_MARKET_PRICES_SCHEMA = pa.schema([
     pa.field("AveragePublishedPrice", pa.string(), nullable=False),
 
     pa.field("ProductGroupCode", pa.string(), nullable=False),
+    pa.field("_base_api", pa.string(), nullable=False),
     pa.field("_created_at", pa.string(), nullable=False),
 ])
 
 # =============================================================================
-# Table 4: market_indices (FAO Dairy Price Indices)
+# Table 4: market_indices (FAO)
 # =============================================================================
 
 MARKET_INDICES_SCHEMA = pa.schema([
@@ -172,18 +181,20 @@ MARKET_INDICES_SCHEMA = pa.schema([
 
 # Bronze version
 BRONZE_MARKET_INDICES_SCHEMA = pa.schema([
-    pa.field("source", pa.string(), nullable=False),
-    pa.field("index_name", pa.string(), nullable=False),
-    pa.field("period_start", pa.string(), nullable=False),
-    pa.field("index_value", pa.float64(), nullable=True),
-    pa.field("base_period", pa.string(), nullable=True),
-    pa.field("ingested_at", pa.string(), nullable=False),
-    pa.field("_source_system", pa.string(), nullable=False),
-    pa.field("_generated_at", pa.string(), nullable=False),
+    pa.field("Month", pa.string(), nullable=False),
+    pa.field("Food Price Index", pa.string(), nullable=False),
+    pa.field("Meat Price Index", pa.string(), nullable=False),
+    pa.field("Dairy Price Index", pa.string(), nullable=False),
+    pa.field("Cereals Price Index", pa.string(), nullable=False),
+    pa.field("Oils Price Index", pa.string(), nullable=False),
+    pa.field("Sugar Price Index", pa.string(), nullable=False),
+    
+    pa.field("_base_api", pa.string(), nullable=False),
+    pa.field("_created_at", pa.string(), nullable=False),
 ])
 
 # =============================================================================
-# Table 5: weather (Farm Weather + THI)
+# Table 5: weather (OpenMeteo)
 # =============================================================================
 
 WEATHER_SCHEMA = pa.schema([
@@ -202,11 +213,12 @@ BRONZE_WEATHER_SCHEMA = pa.schema([
     pa.field("temperature_celsius", pa.float64(), nullable=True),
     pa.field("relative_humidity_pct", pa.float64(), nullable=True),
     pa.field("precipitation_mm", pa.float64(), nullable=True),
+    pa.field("_base_api", pa.string(), nullable=False),
     pa.field("_created_at", pa.string(), nullable=False),
 ])
 
 # =============================================================================
-# Table 6: food_recalls (Food Safety Alerts & Recalls)
+# Table 6: food_recalls (OpenFDA)
 # =============================================================================
 
 FOOD_RECALLS_SCHEMA = pa.schema([
@@ -252,6 +264,7 @@ BRONZE_FOOD_RECALLS_SCHEMA = pa.schema([
     pa.field("meta_results_limit", pa.string(), nullable=False),
     pa.field("meta_results_total", pa.string(), nullable=False),
     pa.field("_expected_total", pa.string(), nullable=False),
+    pa.field("_base_api", pa.string(), nullable=False),
     pa.field("_created_at", pa.string(), nullable=False),
 ])
 
@@ -313,8 +326,17 @@ SCHEMA_REGISTRY = {
         "bronze": BRONZE_MARKET_PRICES_SCHEMA,
         "silver": MARKET_PRICES_SCHEMA,
         "partition": PARTITION_COLUMNS["market_prices"],
-        "id_column": "observed_at",
+        "id_column": "_created_at",
         "description": "International dairy commodity prices (GDT/CME/USDA)",
+    },
+    "market_reports": {
+        "source_name": "market_reports",
+        "table_name": "market_reports",
+        "bronze": BRONZE_MARKET_PRICES_SCHEMA,  # placeholder
+        "silver": MARKET_PRICES_SCHEMA,  # placeholder
+        "partition": PARTITION_COLUMNS["market_prices"],  # placeholder
+        "id_column": "_created_at",
+        "description": "USDA market reports",
     },
     "market_indices": {
         "source_name": "market_indices",
@@ -322,7 +344,7 @@ SCHEMA_REGISTRY = {
         "bronze": BRONZE_MARKET_INDICES_SCHEMA,
         "silver": MARKET_INDICES_SCHEMA,
         "partition": PARTITION_COLUMNS["market_indices"],
-        "id_column": "period_start",
+        "id_column": "_created_at",
         "description": "FAO dairy price indices",
     },
     "weather": {
@@ -331,7 +353,7 @@ SCHEMA_REGISTRY = {
         "bronze": BRONZE_WEATHER_SCHEMA,
         "silver": WEATHER_SCHEMA,
         "partition": PARTITION_COLUMNS["weather"],
-        "id_column": "observed_at",
+        "id_column": "_created_at",
         "description": "Farm weather data with THI stress index",
     },
     "food_recalls": {
@@ -340,7 +362,7 @@ SCHEMA_REGISTRY = {
         "bronze": BRONZE_FOOD_RECALLS_SCHEMA,
         "silver": FOOD_RECALLS_SCHEMA,
         "partition": PARTITION_COLUMNS["food_recalls"],
-        "id_column": "recall_id",
+        "id_column": "_created_at",
         "description": "Food safety alerts and recalls (FDA/VFA)",
     },
     "bronze_metadata": {
