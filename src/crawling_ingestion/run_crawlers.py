@@ -20,8 +20,8 @@ PRODUCTION_ENV = False
 TABLE_BASE_URI = define_table_base_uri(PRODUCTION_ENV)
 
 # TODO: Hardcode start - end date to test
-START_DATE = datetime(2025, 1, 1)
-END_DATE = datetime(2025, 2, 1)
+START_DATE = datetime(2025, 1, 1).strftime("%Y-%m-%d")
+END_DATE = datetime(2025, 2, 1).strftime("%Y-%m-%d")
 
 
 
@@ -35,26 +35,26 @@ def run_crawlers():
         "usda": "market_reports",
     }
     
-    # 1. OpenMeteo
-    for farm_id, location in FARM_LOCATIONS.items():
-        df = get_openmeteo_weather_data(
-            farm_id=farm_id,
-            latitude=location["lat"],
-            longitude=location["lon"],
-            start_date=START_DATE.strftime("%Y-%m-%d"),
-            end_date=END_DATE.strftime("%Y-%m-%d"),
-        )
-        write_bronze_batch(
-            df=df, 
-            table_name=TABLE_NAMES["openmeteo"],
-            bronze_root=TABLE_BASE_URI,
-        )
+    # # 1. OpenMeteo
+    # for farm_id, location in FARM_LOCATIONS.items():
+    #     df = get_openmeteo_weather_data(
+    #         farm_id=farm_id,
+    #         latitude=location["lat"],
+    #         longitude=location["lon"],
+    #         start_date=START_DATE,
+    #         end_date=END_DATE,
+    #     )
+    #     write_bronze_batch(
+    #         df=df, 
+    #         table_name=TABLE_NAMES["openmeteo"],
+    #         bronze_root=TABLE_BASE_URI,
+    #     )
     
     
     # 2. OpenFDA
     openfda_dfs = get_openfda_foodrecall_data(
-        start_date=START_DATE.strftime("%Y%m%d"),
-        end_date=END_DATE.strftime("%Y%m%d"),
+        start_date=START_DATE,
+        end_date=END_DATE,
         expected_total=7
     )
     
@@ -66,49 +66,49 @@ def run_crawlers():
         )
     
     
-    # 3. GDT
-    gdt_df = get_gdt_marketprice_data(
-        start_date=START_DATE.strftime("%Y-%m-%d"),
-        end_date=END_DATE.strftime("%Y-%m-%d"),
-        product_codes=GDT_PRODUCT_CODES
-    )
+    # # 3. GDT
+    # gdt_df = get_gdt_marketprice_data(
+    #     start_date=START_DATE,
+    #     end_date=END_DATE,
+    #     product_codes=GDT_PRODUCT_CODES
+    # )
     
-    write_bronze_batch(
-        df=gdt_df,
-        table_name=TABLE_NAMES["gdt"],
-        bronze_root=TABLE_BASE_URI,
-    )
-    
-    
-    # 4. FAO
-    fao_df = get_fao_marketindices_data(
-        start_date=START_DATE.strftime("%Y-%m-%d"),
-        end_date=END_DATE.strftime("%Y-%m-%d"),
-    )
-    
-    write_bronze_batch(
-        df=fao_df,
-        table_name=TABLE_NAMES["fao"],
-        bronze_root=TABLE_BASE_URI,
-    )
+    # write_bronze_batch(
+    #     df=gdt_df,
+    #     table_name=TABLE_NAMES["gdt"],
+    #     bronze_root=TABLE_BASE_URI,
+    # )
     
     
-    # 5. USDA
-    usda_dfs = get_usda_marketreports_data(
-        start_date=START_DATE.strftime("%Y-%m-%d"),
-        end_date=END_DATE.strftime("%Y-%m-%d"),
-        keyword=USDA_REPORT_KEYWORD
-    )
+    # # 4. FAO
+    # fao_df = get_fao_marketindices_data(
+    #     start_date=START_DATE,
+    #     end_date=END_DATE,
+    # )
     
-    for df in usda_dfs:
-        # NOTE: Do API response k dong nhat (moi df mot schema khac nhau) -> k check schema -> xu ly sau o silver
-        # TODO: Schema trong lakehouse_storage/schemas.py cua table nay dang de tam placeholder
-        write_bronze_batch(
-            df=df,
-            table_name=TABLE_NAMES["usda"],
-            bronze_root=TABLE_BASE_URI,
-            validate_schema=False
-        )
+    # write_bronze_batch(
+    #     df=fao_df,
+    #     table_name=TABLE_NAMES["fao"],
+    #     bronze_root=TABLE_BASE_URI,
+    # )
+    
+    
+    # # 5. USDA
+    # usda_dfs = get_usda_marketreports_data(
+    #     start_date=START_DATE,
+    #     end_date=END_DATE,
+    #     keyword=USDA_REPORT_KEYWORD
+    # )
+    
+    # for df in usda_dfs:
+    #     # NOTE: Do API response k dong nhat (moi df mot schema khac nhau) -> k check schema -> xu ly sau o silver
+    #     # TODO: Schema trong lakehouse_storage/schemas.py cua table nay dang de tam placeholder
+    #     write_bronze_batch(
+    #         df=df,
+    #         table_name=TABLE_NAMES["usda"],
+    #         bronze_root=TABLE_BASE_URI,
+    #         validate_schema=False
+    #     )
 
 
 

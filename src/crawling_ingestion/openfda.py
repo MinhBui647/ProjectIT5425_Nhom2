@@ -19,17 +19,18 @@ def get_openfda_foodrecall_data(
 ):
     """
     Params:
-        start_date: str, format "YYYYmmdd"
-        end_date: str, format "YYYYmmdd"
+        start_date: str, format "YYYY-mm-dd"
+        end_date: str, format "YYYY-mm-dd"
         expected_total: int
     
     Returns:
         Dict | None
     """
     
-    _s, _e = datetime_validate_range(start_date, end_date)
+    dt_start_date, dt_end_date = datetime_validate_range(start_date, end_date)
+    start_date_str, end_date_str = dt_start_date.strftime("%Y%m%d"), dt_end_date.strftime("%Y%m%d")
     
-    openfda_api = f"{OPENFDA_BASE_API}?search=report_date:[{start_date}+TO+{end_date}]"
+    openfda_api = f"{OPENFDA_BASE_API}?search=report_date:[{start_date_str}+TO+{end_date_str}]"
     pages = math.ceil(expected_total / OPENFDA_MAX_QUERY_LIMIT) 
     dfs = []
     
