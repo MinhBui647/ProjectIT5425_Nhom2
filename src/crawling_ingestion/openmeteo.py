@@ -35,7 +35,8 @@ def get_openmeteo_weather_data(
     
     _s, _e = datetime_validate_range(start_date, end_date)
     
-    openmeteo_api = f"{OPENMETEO_BASE_API}?latitude={latitude}&longitude={longitude}&start_date={start_date}&end_date={end_date}&hourly={",".join(params)}&timezone={timezone}&models={models}&temperature_unit={temperature_unit}&precipitation_unit={precipitation_unit}"
+    hourly_params = ",".join(params)
+    openmeteo_api = f"{OPENMETEO_BASE_API}?latitude={latitude}&longitude={longitude}&start_date={start_date}&end_date={end_date}&hourly={hourly_params}&timezone={timezone}&models={models}&temperature_unit={temperature_unit}&precipitation_unit={precipitation_unit}"
     res = requests.get(openmeteo_api, timeout=15)
     
     # Get successfully
