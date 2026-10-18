@@ -1,0 +1,9 @@
+chdb
+polars
+pyarrow
+pandas
+duckdb
+numpy
+matplotlib
+deltalake
+pytest

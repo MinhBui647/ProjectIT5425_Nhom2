@@ -3,11 +3,20 @@ param(
     [string]$Product = 'ALL',
     [string]$StartDate = '2025-01-01',
     [string]$EndDate = '2025-06-29',
-    [string]$OutputPath
+    [string]$OutputPath,
+    # Optional per-request DNS resolver; does not change Windows network settings.
+    [string]$DnsServer
 )
 . (Join-Path $PSScriptRoot 'crawl_common.ps1')
 $first, $last = Get-CrawlRange $StartDate $EndDate
 $path = Get-CrawlOutput $OutputPath "data/raw/usda/usda_${Product}_${StartDate}_${EndDate}.json"
+$usdaAddress = $null
+if ($DnsServer) {
+    Get-Command curl.exe -ErrorAction Stop | Out-Null
+    $usdaAddress = Resolve-DnsName 'mpr.datamart.ams.usda.gov' -Type A -Server $DnsServer -DnsOnly |
+        Where-Object { $_.Type -eq 'A' } | Select-Object -First 1 -ExpandProperty IPAddress
+    if (-not $usdaAddress) { throw 'USDA DNS lookup returned no IPv4 address.' }
+}
 $sections = [ordered]@{
     BUTTER = 'Final Butter Prices and Sales'
     CHEDDAR_40LB = 'Final 40 Pound Block Cheddar Cheese Prices and Sales'
@@ -20,7 +29,16 @@ foreach ($key in $sections.Keys) {
     if ($Product -ne 'ALL' -and $Product -ne $key) { continue }
     Write-Host "Fetching USDA $key..."
     $url = 'https://mpr.datamart.ams.usda.gov/services/v1.1/reports/2993/' + [uri]::EscapeDataString($sections[$key])
-    $payload = Invoke-RestMethod -Uri $url -TimeoutSec 60
+    $dateQuery = 'week_ending_date=' + $first.ToString('MM/dd/yyyy', $CrawlCulture) + ':' + $last.ToString('MM/dd/yyyy', $CrawlCulture)
+    $url += '?q=' + [uri]::EscapeDataString($dateQuery)
+    if ($usdaAddress) {
+        # Preserve the hostname for TLS certificate verification and SNI.
+        $body = & curl.exe --fail --silent --show-error --connect-timeout 20 --max-time 60 --resolve "mpr.datamart.ams.usda.gov:443:$usdaAddress" $url
+        if ($LASTEXITCODE -ne 0) { throw "USDA request failed for $key (curl exit $LASTEXITCODE); no output saved." }
+        $payload = ($body -join "`n") | ConvertFrom-Json
+    } else {
+        $payload = Invoke-RestMethod -Uri $url -TimeoutSec 60
+    }
     $fetched = [datetime]::UtcNow.ToString('o')
     if (-not $payload.results) { throw 'Missing USDA results.' }
     if ($null -eq $payload.stats.'totalRows:' -or [int]$payload.stats.'totalRows:' -ne @($payload.results).Count) {

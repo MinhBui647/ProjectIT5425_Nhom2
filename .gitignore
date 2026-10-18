@@ -22,7 +22,7 @@ coverage.xml
 /build/
 /dist/
 *.egg-info/
-
+huongdan/
 # MinIO local artifacts (binary fallback)
 infra/bin/
 infra/minio_data/
