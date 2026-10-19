@@ -325,6 +325,15 @@ def _cast_to_schema(
                     e,
                 )
                 cols[field.name] = table.column(field.name)
+        elif field.nullable:
+            # Keep the Arrow batch compatible with an already-created Delta
+            # contract when a newly introduced optional Silver column is not
+            # produced by an older writer yet.
+            cols[field.name] = pa.nulls(table.num_rows, type=field.type)
+        elif strict:
+            raise ValueError(
+                f"Missing non-nullable column '{field.name}' required by Silver schema"
+            )
     for name in table.column_names:
         if name not in target_names:
             cols[name] = table.column(name)
