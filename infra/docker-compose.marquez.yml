@@ -1,0 +1,47 @@
+services:
+  marquez-db:
+    image: postgres:14
+    environment:
+      POSTGRES_DB: marquez
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U marquez -d marquez"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - marquez_db:/var/lib/postgresql/data
+
+  marquez-api:
+    image: marquezproject/marquez:0.50.0
+    environment:
+      MARQUEZ_PORT: "5000"
+      MARQUEZ_ADMIN_PORT: "5001"
+      POSTGRES_HOST: marquez-db
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: marquez
+      POSTGRES_USER: marquez
+      POSTGRES_PASSWORD: marquez
+      SEARCH_ENABLED: "false"
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    depends_on:
+      marquez-db:
+        condition: service_healthy
+
+  marquez-web:
+    image: marquezproject/marquez-web:0.50.0
+    environment:
+      MARQUEZ_HOST: marquez-api
+      MARQUEZ_PORT: "5000"
+      WEB_PORT: "3000"
+      REACT_APP_ADVANCED_SEARCH: "false"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - marquez-api
+
+volumes:
+  marquez_db:
