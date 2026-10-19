@@ -29,7 +29,8 @@ def test_run_sensor_demo_local(tmp_path):
     assert result["status"] == "PASS"
     assert result["rows_ingested"] == 5
     assert result["silver_rows"] == 5
-    assert result["silver_columns"] == 16
+    # Governance adds the nullable is_anomaly_flag field to the Silver contract.
+    assert result["silver_columns"] == 17
     assert result["delta_version"] == 0
     assert result["delta_data_files"] == 1
 

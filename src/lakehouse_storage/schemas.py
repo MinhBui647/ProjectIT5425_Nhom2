@@ -6,7 +6,7 @@ All schema definitions are centralized here and used by all other modules.
 Tables:
     - sensor_telemetry: IoT sensor readings (1 sample/second)
     - mes_lims: Production batch logs and quality tests
-    - market_prices: International dairy commodity prices (GDT/CME/USDA)
+    - market_prices: Global Dairy Trade (GDT) event prices
     - market_indices: FAO dairy price indices
     - weather: Farm weather data with THI stress index
     - food_recalls: Food safety alerts and recalls (FDA/VFA)
@@ -39,6 +39,12 @@ PARTITION_COLUMNS = {
     "weather": ["farm_id", "ingestion_date"],
     "food_recalls": ["ingestion_date"],
     "bronze_metadata": ["fetched_at"],
+}
+
+# Sources that may be retained in Bronze but do not have a stable Silver v1
+# contract. They are deliberately kept out of SCHEMA_REGISTRY/list_tables().
+UNSUPPORTED_SILVER_TABLES = {
+    "market_reports": "USDA report sections do not share a stable schema",
 }
 
 # Valid codes for data validation
@@ -84,6 +90,7 @@ SENSOR_TELEMETRY_SCHEMA = pa.schema([
     pa.field("flow_rate", pa.float32(), nullable=True),
     pa.field("conductivity", pa.float32(), nullable=True),
     pa.field("power_kw", pa.float32(), nullable=True),
+    pa.field("is_anomaly_flag", pa.bool_(), nullable=True),
 ])
 
 # Bronze version: raw data with string timestamps
@@ -156,13 +163,13 @@ MARKET_PRICES_SCHEMA = pa.schema([
 BRONZE_MARKET_PRICES_SCHEMA = pa.schema([
     pa.field("EventNumber", pa.string(), nullable=False),
     pa.field("EventDate", pa.string(), nullable=False),
-    pa.field("ProductGroupGUID", pa.string(), nullable=False),
-    pa.field("ProductGroupName", pa.string(), nullable=False),
-    pa.field("PriceIndexPercentageChange", pa.string(), nullable=False),
+    pa.field("ProductGroupGUID", pa.string(), nullable=True),
+    pa.field("ProductGroupName", pa.string(), nullable=True),
+    pa.field("PriceIndexPercentageChange", pa.string(), nullable=True),
     pa.field("AveragePublishedPrice", pa.string(), nullable=False),
-
     pa.field("ProductGroupCode", pa.string(), nullable=False),
-    pa.field("_base_api", pa.string(), nullable=False),
+    # Older handed-off Bronze files predate this crawler metadata column.
+    pa.field("_base_api", pa.string(), nullable=True),
     pa.field("_created_at", pa.string(), nullable=False),
 ])
 
@@ -179,8 +186,26 @@ MARKET_INDICES_SCHEMA = pa.schema([
     pa.field("ingested_at", pa.timestamp("us", tz=TIMEZONE), nullable=False),
 ])
 
-# Bronze version
+# Bronze handoff contract. The TV2 Drive vault stores FAO in long form; this is
+# intentionally distinct from the older wide crawler draft documented earlier.
 BRONZE_MARKET_INDICES_SCHEMA = pa.schema([
+    pa.field("source", pa.string(), nullable=False),
+    pa.field("index_name", pa.string(), nullable=False),
+    pa.field("period_start", pa.string(), nullable=False),
+    pa.field("index_value", pa.float64(), nullable=False),
+    pa.field("base_period", pa.string(), nullable=True),
+    pa.field("ingested_at", pa.string(), nullable=True),
+    pa.field("_source_system", pa.string(), nullable=True),
+    pa.field("_generated_at", pa.string(), nullable=True),
+    pa.field("_created_at", pa.string(), nullable=True),
+    pa.field("_source_url", pa.string(), nullable=True),
+    pa.field("_raw_record", pa.string(), nullable=True),
+    pa.field("_value_status", pa.string(), nullable=True),
+])
+
+# The crawler currently emits an older wide FAO shape. Keep it as an explicit
+# accepted Bronze variant until TV2 and the handed-off vault converge.
+BRONZE_MARKET_INDICES_WIDE_SCHEMA = pa.schema([
     pa.field("Month", pa.string(), nullable=False),
     pa.field("Food Price Index", pa.string(), nullable=False),
     pa.field("Meat Price Index", pa.string(), nullable=False),
@@ -188,8 +213,7 @@ BRONZE_MARKET_INDICES_SCHEMA = pa.schema([
     pa.field("Cereals Price Index", pa.string(), nullable=False),
     pa.field("Oils Price Index", pa.string(), nullable=False),
     pa.field("Sugar Price Index", pa.string(), nullable=False),
-    
-    pa.field("_base_api", pa.string(), nullable=False),
+    pa.field("_base_api", pa.string(), nullable=True),
     pa.field("_created_at", pa.string(), nullable=False),
 ])
 
@@ -203,6 +227,8 @@ WEATHER_SCHEMA = pa.schema([
     pa.field("temperature_c", pa.float32(), nullable=True),
     pa.field("relative_humidity_pct", pa.float32(), nullable=True),
     pa.field("precipitation_mm", pa.float32(), nullable=True),
+    pa.field("thi_index", pa.float32(), nullable=True),
+    pa.field("is_heat_stress", pa.bool_(), nullable=True),
     pa.field("ingested_at", pa.timestamp("us", tz=TIMEZONE), nullable=False),
 ])
 
@@ -211,9 +237,9 @@ BRONZE_WEATHER_SCHEMA = pa.schema([
     pa.field("farm_id", pa.string(), nullable=False),
     pa.field("observed_at", pa.string(), nullable=False),
     pa.field("temperature_celsius", pa.float64(), nullable=True),
-    pa.field("relative_humidity_pct", pa.float64(), nullable=True),
+    pa.field("relative_humidity_pct", pa.int64(), nullable=True),
     pa.field("precipitation_mm", pa.float64(), nullable=True),
-    pa.field("_base_api", pa.string(), nullable=False),
+    pa.field("_base_api", pa.string(), nullable=True),
     pa.field("_created_at", pa.string(), nullable=False),
 ])
 
@@ -228,43 +254,44 @@ FOOD_RECALLS_SCHEMA = pa.schema([
     pa.field("product", pa.string(), nullable=True),
     pa.field("reason", pa.string(), nullable=True),
     pa.field("status", pa.string(), nullable=True),
+    pa.field("classification", pa.string(), nullable=False),
     pa.field("source_url", pa.string(), nullable=True),
     pa.field("ingested_at", pa.timestamp("us", tz=TIMEZONE), nullable=False),
 ])
 
 # Bronze version
 BRONZE_FOOD_RECALLS_SCHEMA = pa.schema([
-    pa.field("status", pa.string(), nullable=False),
-    pa.field("city", pa.string(), nullable=False),
-    pa.field("state", pa.string(), nullable=False),
-    pa.field("country", pa.string(), nullable=False),
+    pa.field("status", pa.string(), nullable=True),
+    pa.field("city", pa.string(), nullable=True),
+    pa.field("state", pa.string(), nullable=True),
+    pa.field("country", pa.string(), nullable=True),
     pa.field("classification", pa.string(), nullable=False),
-    pa.field("openfda", pa.string(), nullable=False),
-    pa.field("product_type", pa.string(), nullable=False),
-    pa.field("event_id", pa.string(), nullable=False),
-    pa.field("recalling_firm", pa.string(), nullable=False),
-    pa.field("address_1", pa.string(), nullable=False),
-    pa.field("address_2", pa.string(), nullable=False),
-    pa.field("postal_code", pa.string(), nullable=False),
-    pa.field("voluntary_mandated", pa.string(), nullable=False),
-    pa.field("initial_firm_notification", pa.string(), nullable=False),
-    pa.field("distribution_pattern", pa.string(), nullable=False),
+    pa.field("openfda", pa.string(), nullable=True),
+    pa.field("product_type", pa.string(), nullable=True),
+    pa.field("event_id", pa.string(), nullable=True),
+    pa.field("recalling_firm", pa.string(), nullable=True),
+    pa.field("address_1", pa.string(), nullable=True),
+    pa.field("address_2", pa.string(), nullable=True),
+    pa.field("postal_code", pa.string(), nullable=True),
+    pa.field("voluntary_mandated", pa.string(), nullable=True),
+    pa.field("initial_firm_notification", pa.string(), nullable=True),
+    pa.field("distribution_pattern", pa.string(), nullable=True),
     pa.field("recall_number", pa.string(), nullable=False),
-    pa.field("product_description", pa.string(), nullable=False),
-    pa.field("product_quantity", pa.string(), nullable=False),
-    pa.field("reason_for_recall", pa.string(), nullable=False),
-    pa.field("recall_initiation_date", pa.string(), nullable=False),
-    pa.field("center_classification_date", pa.string(), nullable=False),
-    pa.field("termination_date", pa.string(), nullable=False),
+    pa.field("product_description", pa.string(), nullable=True),
+    pa.field("product_quantity", pa.string(), nullable=True),
+    pa.field("reason_for_recall", pa.string(), nullable=True),
+    pa.field("recall_initiation_date", pa.string(), nullable=True),
+    pa.field("center_classification_date", pa.string(), nullable=True),
+    pa.field("termination_date", pa.string(), nullable=True),
     pa.field("report_date", pa.string(), nullable=False),
-    pa.field("code_info", pa.string(), nullable=False),
-    pa.field("more_code_info", pa.string(), nullable=False),
-    pa.field("meta_last_updated", pa.string(), nullable=False),
-    pa.field("meta_results_skip", pa.string(), nullable=False),
-    pa.field("meta_results_limit", pa.string(), nullable=False),
-    pa.field("meta_results_total", pa.string(), nullable=False),
-    pa.field("_expected_total", pa.string(), nullable=False),
-    pa.field("_base_api", pa.string(), nullable=False),
+    pa.field("code_info", pa.string(), nullable=True),
+    pa.field("more_code_info", pa.string(), nullable=True),
+    pa.field("meta_last_updated", pa.string(), nullable=True),
+    pa.field("meta_results_skip", pa.int32(), nullable=True),
+    pa.field("meta_results_limit", pa.int32(), nullable=True),
+    pa.field("meta_results_total", pa.int32(), nullable=True),
+    pa.field("_expected_total", pa.int32(), nullable=True),
+    pa.field("_base_api", pa.string(), nullable=True),
     pa.field("_created_at", pa.string(), nullable=False),
 ])
 
@@ -326,25 +353,20 @@ SCHEMA_REGISTRY = {
         "bronze": BRONZE_MARKET_PRICES_SCHEMA,
         "silver": MARKET_PRICES_SCHEMA,
         "partition": PARTITION_COLUMNS["market_prices"],
-        "id_column": "_created_at",
-        "description": "International dairy commodity prices (GDT/CME/USDA)",
-    },
-    "market_reports": {
-        "source_name": "market_reports",
-        "table_name": "market_reports",
-        "bronze": BRONZE_MARKET_PRICES_SCHEMA,  # placeholder
-        "silver": MARKET_PRICES_SCHEMA,  # placeholder
-        "partition": PARTITION_COLUMNS["market_prices"],  # placeholder
-        "id_column": "_created_at",
-        "description": "USDA market reports",
+        "id_column": ("EventNumber", "ProductGroupCode"),
+        "description": "Global Dairy Trade event prices",
     },
     "market_indices": {
         "source_name": "market_indices",
         "table_name": "market_indices",
         "bronze": BRONZE_MARKET_INDICES_SCHEMA,
+        "bronze_variants": (
+            BRONZE_MARKET_INDICES_SCHEMA,
+            BRONZE_MARKET_INDICES_WIDE_SCHEMA,
+        ),
         "silver": MARKET_INDICES_SCHEMA,
         "partition": PARTITION_COLUMNS["market_indices"],
-        "id_column": "_created_at",
+        "id_column": ("source", "index_name", "period_start"),
         "description": "FAO dairy price indices",
     },
     "weather": {
@@ -353,7 +375,7 @@ SCHEMA_REGISTRY = {
         "bronze": BRONZE_WEATHER_SCHEMA,
         "silver": WEATHER_SCHEMA,
         "partition": PARTITION_COLUMNS["weather"],
-        "id_column": "_created_at",
+        "id_column": "observed_at",
         "description": "Farm weather data with THI stress index",
     },
     "food_recalls": {
@@ -362,7 +384,7 @@ SCHEMA_REGISTRY = {
         "bronze": BRONZE_FOOD_RECALLS_SCHEMA,
         "silver": FOOD_RECALLS_SCHEMA,
         "partition": PARTITION_COLUMNS["food_recalls"],
-        "id_column": "_created_at",
+        "id_column": "recall_number",
         "description": "Food safety alerts and recalls (FDA/VFA)",
     },
     "bronze_metadata": {
@@ -408,9 +430,23 @@ def get_bronze_schema(table_name: str) -> pa.Schema:
     return SCHEMA_REGISTRY[table_name]["bronze"]
 
 
+def get_bronze_schema_variants(table_name: str) -> tuple[pa.Schema, ...]:
+    """Return every accepted raw Bronze shape for a supported table."""
+    table_name = normalize_table_name(table_name)
+    if table_name not in SCHEMA_REGISTRY:
+        raise ValueError(f"Unknown table: {table_name}")
+    registry_entry = SCHEMA_REGISTRY[table_name]
+    return tuple(registry_entry.get("bronze_variants", (registry_entry["bronze"],)))
+
+
 def get_silver_schema(table_name: str) -> pa.Schema:
     """Get Silver schema for a table."""
     table_name = normalize_table_name(table_name)
+    if table_name in UNSUPPORTED_SILVER_TABLES:
+        raise ValueError(
+            f"Unsupported Silver table '{table_name}': "
+            f"{UNSUPPORTED_SILVER_TABLES[table_name]}"
+        )
     if table_name not in SCHEMA_REGISTRY:
         raise ValueError(f"Unknown table: {table_name}")
     return SCHEMA_REGISTRY[table_name]["silver"]
@@ -427,6 +463,8 @@ def get_partition_columns(table_name: str) -> list:
 def get_source_name(table_name: str) -> str:
     """Get Bronze source folder name for a table."""
     table_name = normalize_table_name(table_name)
+    if table_name in UNSUPPORTED_SILVER_TABLES:
+        return table_name
     if table_name not in SCHEMA_REGISTRY:
         raise ValueError(f"Unknown table: {table_name}")
     return SCHEMA_REGISTRY[table_name]["source_name"]
@@ -440,8 +478,8 @@ def get_table_name(table_name: str) -> str:
     return SCHEMA_REGISTRY[table_name]["table_name"]
 
 
-def get_id_column(table_name: str) -> str:
-    """Get primary ID column for a table."""
+def get_id_column(table_name: str) -> str | tuple[str, ...]:
+    """Get the primary ID column or composite business key for a table."""
     table_name = normalize_table_name(table_name)
     if table_name not in SCHEMA_REGISTRY:
         raise ValueError(f"Unknown table: {table_name}")

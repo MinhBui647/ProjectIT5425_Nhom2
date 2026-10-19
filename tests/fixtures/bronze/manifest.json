@@ -1,0 +1,72 @@
+{
+  "manifest_version": 1,
+  "scope": "Data governance MVP Bronze fixtures",
+  "tables": {
+    "sensor_telemetry": {
+      "source_kind": "sensor_demo_generator",
+      "source_path": "data/01_bronze_vault/sensor_telemetry/2026-10-10/sensor_telemetry_20261010_051357_098374.parquet",
+      "file_name": "sensor_telemetry_20261010_051357_098374.parquet",
+      "sidecar_name": "sensor_telemetry_20261010_051357_098374.sha256",
+      "sha256": "4e1c4d17178c4de366d6c7a4428a071aa97ae1a9f3d26ecae631bc16b2eb3b79",
+      "size_bytes": 8449,
+      "row_count": 60,
+      "columns": ["timestamp", "line_id", "batch_id", "preheat_temp", "uht_temp", "homo_press_stage1", "homo_press_stage2", "flow_rate", "conductivity", "power_kw", "_source_system", "_generated_at"],
+      "dtypes": {"timestamp": "String", "line_id": "String", "batch_id": "String", "preheat_temp": "Float64", "uht_temp": "Float64", "homo_press_stage1": "Float64", "homo_press_stage2": "Float64", "flow_rate": "Float64", "conductivity": "Float64", "power_kw": "Float64", "_source_system": "String", "_generated_at": "String"}
+    },
+    "mes_lims": {
+      "source_kind": "tv1_generator",
+      "source_path": "generated:lakehouse_storage.generate_mes_data.generate_mes_batch(seed=42)",
+      "file_name": "mes_lims_20261015_104251_510341.parquet",
+      "sidecar_name": "mes_lims_20261015_104251_510341.sha256",
+      "sha256": "3b606eedd6bb4b0ee2a926ed46e2c442f268d052a83d95351b6847d7069790ef",
+      "size_bytes": 5563,
+      "row_count": 1,
+      "columns": ["batch_id", "line_id", "production_start", "production_end", "sku_id", "fat_in", "protein_in", "acidity_sh", "yield_recovery_pct", "microbiology_status", "batch_defect_flag", "_source_system", "_generated_at"],
+      "dtypes": {"batch_id": "String", "line_id": "String", "production_start": "String", "production_end": "String", "sku_id": "String", "fat_in": "Float64", "protein_in": "Float64", "acidity_sh": "Float64", "yield_recovery_pct": "Float64", "microbiology_status": "String", "batch_defect_flag": "Int64", "_source_system": "String", "_generated_at": "String"}
+    },
+    "weather": {
+      "source_kind": "tv2_google_drive",
+      "source_path": "gdrive://1Tfxs11KkPxer7Tm8FwzpDLzoV8_cPQou/weather_20261007_083705_175426.parquet",
+      "file_name": "weather_20261007_083705_175426.parquet",
+      "sidecar_name": "weather_20261007_083705_175426.sha256",
+      "sha256": "1bf3e4d3bb6bcacda8a6841e9f7aa500629195a9c5a253131b668c25fb6ce0dc",
+      "size_bytes": 2800,
+      "row_count": 24,
+      "columns": ["farm_id", "observed_at", "temperature_celsius", "relative_humidity_pct", "precipitation_mm", "_created_at"],
+      "dtypes": {"farm_id": "String", "observed_at": "String", "temperature_celsius": "Float64", "relative_humidity_pct": "Int64", "precipitation_mm": "Float64", "_created_at": "String"}
+    },
+    "market_prices": {
+      "source_kind": "tv2_google_drive",
+      "source_path": "gdrive://1SwcYVl-uIU0Ft_qOE1VEKrXgxC99Stbv/market_prices_20261007_083750_517169.parquet",
+      "file_name": "market_prices_20261007_083750_517169.parquet",
+      "sidecar_name": "market_prices_20261007_083750_517169.sha256",
+      "sha256": "cc06b58f22ec39ea1fd234d326d711e9be2f9f44a541349204f722b2440b75f6",
+      "size_bytes": 3804,
+      "row_count": 3,
+      "columns": ["EventNumber", "EventDate", "ProductGroupGUID", "ProductGroupName", "PriceIndexPercentageChange", "AveragePublishedPrice", "ProductGroupCode", "_created_at"],
+      "dtypes": {"EventNumber": "String", "EventDate": "String", "ProductGroupGUID": "String", "ProductGroupName": "String", "PriceIndexPercentageChange": "String", "AveragePublishedPrice": "String", "ProductGroupCode": "String", "_created_at": "String"}
+    },
+    "market_indices": {
+      "source_kind": "tv2_google_drive",
+      "source_path": "gdrive://1BsXX6bHqlfVXzvc4L3e-gZlsJfsH2Q9_/market_indices_20261007_083805_525977.parquet",
+      "file_name": "market_indices_20261007_083805_525977.parquet",
+      "sidecar_name": "market_indices_20261007_083805_525977.sha256",
+      "sha256": "29bf2cfd7ad25efa8194f6407f729503abfc09639c06b2dc4663ecb0664f3ded",
+      "size_bytes": 6143,
+      "row_count": 1,
+      "columns": ["source", "index_name", "period_start", "index_value", "base_period", "ingested_at", "_source_system", "_generated_at", "_created_at", "_source_url", "_raw_record", "_value_status"],
+      "dtypes": {"source": "String", "index_name": "String", "period_start": "String", "index_value": "Float64", "base_period": "String", "ingested_at": "String", "_source_system": "String", "_generated_at": "String", "_created_at": "String", "_source_url": "String", "_raw_record": "String", "_value_status": "String"}
+    },
+    "food_recalls": {
+      "source_kind": "tv2_google_drive",
+      "source_path": "gdrive://1Wbr-Zl_lhm8On2nikckngs4TYcuK-jRW/food_recalls_20261007_083741_158898.parquet",
+      "file_name": "food_recalls_20261007_083741_158898.parquet",
+      "sidecar_name": "food_recalls_20261007_083741_158898.sha256",
+      "sha256": "a57befb9d7ba1d2b66e56e2cd2e3dd88940ff32f5e045749692c3123eeb4a1b8",
+      "size_bytes": 15830,
+      "row_count": 5,
+      "columns": ["status", "city", "state", "country", "classification", "openfda", "product_type", "event_id", "recalling_firm", "address_1", "address_2", "postal_code", "voluntary_mandated", "initial_firm_notification", "distribution_pattern", "recall_number", "product_description", "product_quantity", "reason_for_recall", "recall_initiation_date", "center_classification_date", "report_date", "code_info", "more_code_info", "termination_date", "meta_last_updated", "meta_results_skip", "meta_results_limit", "meta_results_total", "_expected_total", "_created_at"],
+      "dtypes": {"status": "String", "city": "String", "state": "String", "country": "String", "classification": "String", "openfda": "String", "product_type": "String", "event_id": "String", "recalling_firm": "String", "address_1": "String", "address_2": "String", "postal_code": "String", "voluntary_mandated": "String", "initial_firm_notification": "String", "distribution_pattern": "String", "recall_number": "String", "product_description": "String", "product_quantity": "String", "reason_for_recall": "String", "recall_initiation_date": "String", "center_classification_date": "String", "report_date": "String", "code_info": "String", "more_code_info": "String", "termination_date": "String", "meta_last_updated": "String", "meta_results_skip": "Int32", "meta_results_limit": "Int32", "meta_results_total": "Int32", "_expected_total": "Int32", "_created_at": "String"}
+    }
+  }
+}

@@ -13,7 +13,7 @@ $pythonExe = Join-Path $projectRoot ".venv\Scripts\python.exe"
 $composeFile = Join-Path $projectRoot "infra\docker-compose.minio.yml"
 
 if (-not (Test-Path -LiteralPath $pythonExe)) {
-    throw "Python environment not found: $pythonExe. Complete D01 first."
+    throw "Python environment not found: $pythonExe. Run the project environment setup first."
 }
 
 if ([string]::IsNullOrWhiteSpace($RunId)) {
