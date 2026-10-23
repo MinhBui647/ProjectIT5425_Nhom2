@@ -14,6 +14,7 @@ from lakehouse_storage.schemas import (
     BRONZE_MARKET_PRICES_SCHEMA,
     MARKET_INDICES_SCHEMA,
     BRONZE_MARKET_INDICES_SCHEMA,
+    BRONZE_MARKET_INDICES_WIDE_SCHEMA,
     WEATHER_SCHEMA,
     BRONZE_WEATHER_SCHEMA,
     FOOD_RECALLS_SCHEMA,
@@ -26,8 +27,10 @@ from lakehouse_storage.schemas import (
     # Registry
     SCHEMA_REGISTRY,
     SCHEMA_ALIASES,
+    UNSUPPORTED_SILVER_TABLES,
     list_tables,
     get_bronze_schema,
+    get_bronze_schema_variants,
     get_silver_schema,
     get_partition_columns,
     get_source_name,
@@ -73,6 +76,12 @@ class TestSchemaRegistry:
             schema = get_silver_schema(table)
             assert isinstance(schema, pa.Schema)
 
+    def test_usda_market_reports_is_explicitly_unsupported_in_silver(self):
+        assert "market_reports" in UNSUPPORTED_SILVER_TABLES
+        assert get_source_name("market_reports") == "market_reports"
+        with pytest.raises(ValueError, match="Unsupported Silver table"):
+            get_silver_schema("market_reports")
+
     def test_get_bronze_schema_with_alias(self):
         """S1-S5 aliases work for schema lookup."""
         schema = get_bronze_schema("S1")
@@ -114,8 +123,10 @@ class TestSchemaRegistry:
         """ID columns are correctly defined."""
         assert get_id_column("sensor_telemetry") == "timestamp"
         assert get_id_column("mes_lims") == "batch_id"
+        assert get_id_column("market_prices") == ("EventNumber", "ProductGroupCode")
+        assert get_id_column("market_indices") == ("source", "index_name", "period_start")
         assert get_id_column("weather") == "observed_at"
-        assert get_id_column("food_recalls") == "recall_id"
+        assert get_id_column("food_recalls") == "recall_number"
 
 
 class TestSensorTelemetrySchema:
@@ -209,14 +220,17 @@ class TestMarketPricesSchema:
     def test_bronze_schema_fields(self):
         """Bronze market_prices has all required fields."""
         names = BRONZE_MARKET_PRICES_SCHEMA.names
-        required = ["source", "product", "observed_at", "price", "currency"]
+        required = [
+            "EventNumber", "EventDate", "ProductGroupCode",
+            "AveragePublishedPrice", "_created_at",
+        ]
         for field in required:
             assert field in names
 
-    def test_bronze_price_is_float64(self):
-        """Bronze market_prices: price is float64."""
-        price_field = BRONZE_MARKET_PRICES_SCHEMA.field("price")
-        assert price_field.type == pa.float64()
+    def test_bronze_price_is_raw_string(self):
+        """GDT Bronze retains the API's raw string price."""
+        price_field = BRONZE_MARKET_PRICES_SCHEMA.field("AveragePublishedPrice")
+        assert price_field.type == pa.string()
 
     def test_silver_price_is_float32(self):
         """Silver market_prices: price is float32."""
@@ -234,6 +248,18 @@ class TestMarketIndicesSchema:
         for field in required:
             assert field in names
 
+    def test_bronze_index_value_is_float64(self):
+        assert BRONZE_MARKET_INDICES_SCHEMA.field("index_value").type == pa.float64()
+
+    def test_drive_long_and_crawler_wide_shapes_are_explicit_variants(self):
+        variants = get_bronze_schema_variants("market_indices")
+        assert variants == (
+            BRONZE_MARKET_INDICES_SCHEMA,
+            BRONZE_MARKET_INDICES_WIDE_SCHEMA,
+        )
+        assert "Month" in BRONZE_MARKET_INDICES_WIDE_SCHEMA.names
+        assert "Dairy Price Index" in BRONZE_MARKET_INDICES_WIDE_SCHEMA.names
+
     def test_silver_period_start_is_date(self):
         """Silver market_indices: period_start is date."""
         field = MARKET_INDICES_SCHEMA.field("period_start")
@@ -246,9 +272,19 @@ class TestWeatherSchema:
     def test_bronze_schema_fields(self):
         """Bronze weather has all required fields."""
         names = BRONZE_WEATHER_SCHEMA.names
-        required = ["farm_id", "observed_at", "temperature_c", "relative_humidity_pct"]
+        required = [
+            "farm_id", "observed_at", "temperature_celsius",
+            "relative_humidity_pct", "_created_at",
+        ]
         for field in required:
             assert field in names
+
+    def test_bronze_humidity_matches_open_meteo_integer_payload(self):
+        assert BRONZE_WEATHER_SCHEMA.field("relative_humidity_pct").type == pa.int64()
+
+    def test_silver_has_thi_outputs(self):
+        assert WEATHER_SCHEMA.field("thi_index").type == pa.float32()
+        assert WEATHER_SCHEMA.field("is_heat_stress").type == pa.bool_()
 
     def test_thi_threshold_defined(self):
         """THI stress threshold is defined."""
@@ -278,9 +314,15 @@ class TestFoodRecallsSchema:
     def test_bronze_schema_fields(self):
         """Bronze food_recalls has all required fields."""
         names = BRONZE_FOOD_RECALLS_SCHEMA.names
-        required = ["source", "recall_id", "published_at"]
+        required = ["recall_number", "report_date", "classification", "_created_at"]
         for field in required:
             assert field in names
+
+    def test_bronze_pagination_metadata_is_integer(self):
+        assert BRONZE_FOOD_RECALLS_SCHEMA.field("meta_results_total").type == pa.int32()
+
+    def test_silver_preserves_classification(self):
+        assert FOOD_RECALLS_SCHEMA.field("classification").type == pa.string()
 
     def test_silver_published_at_is_timestamp(self):
         """Silver food_recalls: published_at is timestamp."""

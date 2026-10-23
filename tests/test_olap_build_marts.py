@@ -21,6 +21,7 @@ def _sensor() -> pl.LazyFrame:
         "flow_rate": [12000.0] * 4,
         "conductivity": [5.0] * 4,
         "power_kw": [3600.0] * 4,
+        "is_anomaly_flag": [False, True, False, None],  # set by TV3 outliers.py
     })
 
 
@@ -74,6 +75,7 @@ def test_fact_sensor_keeps_all_rows_and_uses_local_time(dims):
     assert f["batch_key"].null_count() == 1          # row without batch
     assert set(f["time_key"]) == {800}               # 01:00 UTC = 08:00 ICT
     assert set(f["date_key"]) == {20260115}
+    assert f.sort("timestamp")["is_anomaly_flag"].to_list() == [0, 1, 0, 0]  # TV3 flag, null -> 0
 
 
 def test_fact_batch_one_row_per_batch(dims):
@@ -84,11 +86,48 @@ def test_fact_batch_one_row_per_batch(dims):
     assert b1["n_readings"][0] == 2
     assert b1["uht_temp_avg"][0] == pytest.approx(141.0)
     assert b1["power_kwh"][0] == pytest.approx(2.0)  # 2 s × 3600 kW / 3600
+    assert b1["n_anomalies"][0] == 1
     assert b1["farm_key"].is_not_null().all()
 
 
-def test_thi_matches_tv3_example():
-    df = pl.DataFrame({"t": [30.0, 10.6], "rh": [80.0, 99.0]})
-    thi = df.select(thi=bm.thi_expr("t", "rh"))["thi"].to_list()
-    assert thi[0] == pytest.approx(82.9, abs=0.1)
-    assert thi[1] == pytest.approx(51.1, abs=0.1)
+def test_require_governed_rejects_silver_not_written_by_tv3():
+    with pytest.raises(SystemExit, match="run_governance"):
+        bm.require_governed(_sensor(), "sensor_telemetry")
+
+
+def test_require_governed_keeps_gate_approved_rows():
+    lf = _sensor().with_columns(
+        _quality_status=pl.Series(["PASS", "PASS_WITH_REJECTIONS", "FAIL", "PASS"]),
+        _contract_version=pl.lit("v1"),
+    )
+    assert bm.require_governed(lf, "sensor_telemetry").collect().height == 3
+
+
+def test_fact_external_uses_tv3_thi_and_heat_stress(dims):
+    hours = [datetime(2025, 1, d, h, tzinfo=UTC) for d in (1, 2) for h in (3, 4)]  # 10:00, 11:00 ICT
+    weather = pl.LazyFrame({
+        "farm_id": ["BA_VI"] * 4,
+        "observed_at": hours,
+        "temperature_c": [22.0, 23.0, 30.0, 31.0],
+        "relative_humidity_pct": [80.0, 82.0, 80.0, 85.0],
+        "precipitation_mm": [0.5, 0.5, 0.0, 1.0],
+        "thi_index": [70.0, 72.0, 82.9, 85.0],               # computed by TV3
+        "is_heat_stress": [False, False, True, True],       # TV3 rule: THI > 72
+    })
+    prices = pl.LazyFrame({
+        "product": ["WMP", "SMP", "AMF"],
+        "observed_at": [datetime(2024, 12, 17, tzinfo=UTC)] * 3,
+        "price": [3800.0, 2700.0, 6900.0],
+    })
+    indices = pl.LazyFrame({                                  # FAO wide Bronze after TV3
+        "index_name": ["Dairy Price Index", "Meat Price Index"],
+        "period_start": [date(2025, 1, 1)] * 2,
+        "index_value": [123.3, 100.5],
+    })
+    ext = bm.build_fact_external(weather, prices, indices, dims["dim_farm"]).sort("date_key")
+    assert ext["date_key"].to_list() == [20250101, 20250102]
+    assert ext["thi_index"].to_list() == pytest.approx([72.0, 85.0])
+    assert ext["is_heat_stress"].to_list() == [0, 1]           # THI = 72 exactly is not stress
+    assert ext["precipitation_mm"].to_list() == pytest.approx([1.0, 1.0])
+    assert ext["gdt_wmp_usd"].to_list() == pytest.approx([3800.0, 3800.0])  # carried forward
+    assert ext["fao_dairy_index"].to_list() == pytest.approx([123.3, 123.3])

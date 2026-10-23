@@ -114,7 +114,10 @@ class TestWriteBronzeBatch:
 
     def test_all_tables_write_correctly(self, tmp_path):
         """All tables can be written to Bronze."""
-        tables = ["sensor_telemetry", "mes_lims", "market_prices", "weather", "food_recalls"]
+        tables = [
+            "sensor_telemetry", "mes_lims", "market_prices", "market_indices",
+            "weather", "food_recalls",
+        ]
 
         for table_name in tables:
             df = self._create_df_for_table(table_name, 10)
@@ -195,43 +198,42 @@ class TestWriteBronzeBatch:
                 "_generated_at": ["2026-01-15T10:00:00"] * n_rows,
             })
         elif table_name == "market_prices":
-            base_time = datetime(2026, 1, 15, 14, 0, 0)
             return pl.DataFrame({
-                "source": ["GDT"] * n_rows,
-                "product": ["WMP"] * n_rows,
-                "contract": ["SPOT"] * n_rows,
-                "observed_at": [base_time.isoformat()] * n_rows,
-                "price": np.random.uniform(3000, 4000, n_rows).tolist(),
-                "currency": ["USD"] * n_rows,
-                "unit": ["metric_ton"] * n_rows,
-                "ingested_at": [datetime.now(timezone.utc).isoformat()] * n_rows,
-                "_source_system": ["TEST"] * n_rows,
-                "_generated_at": [datetime.now(timezone.utc).isoformat()] * n_rows,
+                "EventNumber": [str(1000 + i) for i in range(n_rows)],
+                "EventDate": ["2026-01-15T14:00:00Z"] * n_rows,
+                "ProductGroupGUID": [f"GUID-{i:04d}" for i in range(n_rows)],
+                "ProductGroupName": ["Whole Milk Powder"] * n_rows,
+                "PriceIndexPercentageChange": ["1.2"] * n_rows,
+                "AveragePublishedPrice": ["3500"] * n_rows,
+                "ProductGroupCode": ["WMP"] * n_rows,
+                "_created_at": ["2026-01-15T14:30:00+00:00"] * n_rows,
+            })
+        elif table_name == "market_indices":
+            return pl.DataFrame({
+                "source": ["FAO"] * n_rows,
+                "index_name": ["Dairy Price Index"] * n_rows,
+                "period_start": ["2026-01-01"] * n_rows,
+                "index_value": [124.5] * n_rows,
+                "base_period": ["2014-2016=100"] * n_rows,
+                "_created_at": ["2026-01-15T14:30:00+00:00"] * n_rows,
             })
         elif table_name == "weather":
             base_time = datetime(2026, 1, 15, 10, 0, 0)
             return pl.DataFrame({
                 "farm_id": ["MOC_CHAU"] * n_rows,
                 "observed_at": [base_time.isoformat()] * n_rows,
-                "temperature_c": np.random.normal(28, 5, n_rows).tolist(),
-                "relative_humidity_pct": np.random.normal(75, 10, n_rows).tolist(),
+                "temperature_celsius": np.random.normal(28, 5, n_rows).tolist(),
+                "relative_humidity_pct": [75] * n_rows,
                 "precipitation_mm": np.abs(np.random.normal(0, 5, n_rows)).tolist(),
-                "ingested_at": [datetime.now(timezone.utc).isoformat()] * n_rows,
-                "_source_system": ["TEST"] * n_rows,
-                "_generated_at": ["2026-01-15T10:00:00"] * n_rows,
+                "_created_at": ["2026-01-15T10:30:00+00:00"] * n_rows,
             })
         elif table_name == "food_recalls":
             return pl.DataFrame({
-                "source": ["FDA"] * n_rows,
-                "recall_id": [f"RECALL-{i:04d}" for i in range(n_rows)],
-                "published_at": ["2026-01-15T10:00:00"] * n_rows,
-                "product": ["Dairy Product"] * n_rows,
-                "reason": ["Potential contamination"] * n_rows,
+                "recall_number": [f"RECALL-{i:04d}" for i in range(n_rows)],
+                "report_date": ["20260115"] * n_rows,
+                "classification": ["Class II"] * n_rows,
                 "status": ["Ongoing"] * n_rows,
-                "source_url": ["https://example.com"] * n_rows,
-                "ingested_at": [datetime.now(timezone.utc).isoformat()] * n_rows,
-                "_source_system": ["TEST"] * n_rows,
-                "_generated_at": [datetime.now(timezone.utc).isoformat()] * n_rows,
+                "_created_at": ["2026-01-15T10:30:00+00:00"] * n_rows,
             })
         else:
             raise ValueError(f"Unknown table: {table_name}")

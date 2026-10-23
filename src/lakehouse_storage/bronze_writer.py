@@ -8,7 +8,7 @@ import polars as pl
 
 from lakehouse_storage.config import BRONZE_LOCAL_PATH
 from lakehouse_storage.schemas import (
-    get_bronze_schema,
+    get_bronze_schema_variants,
     get_source_name,
     normalize_table_name,
 )
@@ -22,7 +22,7 @@ DATE_COLUMNS = {
     "mes_lims": ["production_start"],
     "market_prices": ["EventDate"],
     "market_reports": ["published_date"],
-    "market_indices": ["Month"],
+    "market_indices": ["period_start", "Month"],
     "weather": ["observed_at"],
     "food_recalls": ["report_date"],
     "bronze_metadata": ["fetched_at"],
@@ -63,8 +63,14 @@ def write_bronze_batch(
     filename = f"{source_name}_{timestamp}.parquet"
     filepath = out_dir / filename
 
-    if filepath.exists():
-        raise FileExistsError(f"File exists (append-only): {filepath}")
+    # Windows clocks can return the same microsecond for rapid consecutive
+    # writes. Preserve append-only behavior by selecting a new name rather
+    # than overwriting or failing a valid batch.
+    sequence = 1
+    while filepath.exists():
+        filename = f"{source_name}_{timestamp}_{sequence:02d}.parquet"
+        filepath = out_dir / filename
+        sequence += 1
 
     df.write_parquet(filepath)
     _write_checksum(filepath)
@@ -171,18 +177,22 @@ def ensure_within_bronze(
 
 def _validate_schema(df: pl.DataFrame, table_name: str) -> None:
     """Validate required columns match Bronze schema."""
-    expected = get_bronze_schema(table_name)
-    expected_names = set(expected.names)
     actual_names = set(df.columns)
+    missing_by_variant = []
+    for expected in get_bronze_schema_variants(table_name):
+        missing_required = sorted(
+            field.name
+            for field in expected
+            if not field.nullable and field.name not in actual_names
+        )
+        if not missing_required:
+            return
+        missing_by_variant.append(missing_required)
 
-    missing_required = []
-    for col in expected_names - actual_names:
-        field = expected.field(col)
-        if not field.nullable:
-            missing_required.append(col)
-
-    if missing_required:
-        raise ValueError(f"Missing required columns for {table_name}: {missing_required}")
+    raise ValueError(
+        f"Missing required columns for {table_name}; accepted variants require: "
+        f"{missing_by_variant}"
+    )
 
 
 def _write_checksum(path: Path) -> None:

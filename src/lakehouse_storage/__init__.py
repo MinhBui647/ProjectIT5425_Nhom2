@@ -13,7 +13,7 @@ Modules:
 Tables:
 - sensor_telemetry: IoT sensor readings (1 sample/second)
 - mes_lims: Production batch logs and quality tests
-- market_prices: International commodity prices (GDT/CME/USDA)
+- market_prices: Global Dairy Trade event prices
 - market_indices: FAO dairy price indices
 - weather: Farm weather data with THI
 - food_recalls: Food safety alerts and recalls (FDA/VFA)
@@ -31,6 +31,7 @@ from lakehouse_storage.schemas import (
     BRONZE_MARKET_PRICES_SCHEMA,
     MARKET_INDICES_SCHEMA,
     BRONZE_MARKET_INDICES_SCHEMA,
+    BRONZE_MARKET_INDICES_WIDE_SCHEMA,
     WEATHER_SCHEMA,
     BRONZE_WEATHER_SCHEMA,
     FOOD_RECALLS_SCHEMA,
@@ -40,7 +41,9 @@ from lakehouse_storage.schemas import (
     # Registry
     SCHEMA_REGISTRY,
     SCHEMA_ALIASES,
+    UNSUPPORTED_SILVER_TABLES,
     get_bronze_schema,
+    get_bronze_schema_variants,
     get_silver_schema,
     get_partition_columns,
     get_source_name,
@@ -134,6 +137,7 @@ __all__ = [
     "BRONZE_MARKET_PRICES_SCHEMA",
     "MARKET_INDICES_SCHEMA",
     "BRONZE_MARKET_INDICES_SCHEMA",
+    "BRONZE_MARKET_INDICES_WIDE_SCHEMA",
     "WEATHER_SCHEMA",
     "BRONZE_WEATHER_SCHEMA",
     "FOOD_RECALLS_SCHEMA",
@@ -143,7 +147,9 @@ __all__ = [
     # Registry
     "SCHEMA_REGISTRY",
     "SCHEMA_ALIASES",
+    "UNSUPPORTED_SILVER_TABLES",
     "get_bronze_schema",
+    "get_bronze_schema_variants",
     "get_silver_schema",
     "get_partition_columns",
     "get_source_name",

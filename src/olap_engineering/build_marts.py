@@ -6,23 +6,55 @@ from pathlib import Path
 import polars as pl
 from deltalake import DeltaTable
 
-from lakehouse_storage import FARM_LOCATIONS, THI_THRESHOLD_STRESS, get_silver_table_uri
+from lakehouse_storage import FARM_LOCATIONS, get_silver_table_uri
 from lakehouse_storage.config import GOLD_LOCAL_PATH, get_storage_options
 from olap_engineering.star_schema import GOLD_TABLES, column_names
 
 LOCAL_TZ = "Asia/Ho_Chi_Minh"
 BATCH_FARM_MAP = Path("data/synthetic/batch_farm_map.json")
 
+# Silver is written by TV3 (data_governance.run_governance): only rows that
+# passed the quality gate are committed, each tagged with its gate status.
+GOVERNED_STATUSES = ["PASS", "PASS_WITH_REJECTIONS"]
+GOVERNANCE_COLUMNS = ["_quality_status", "_contract_version"]
+# Columns TV3 derives during Bronze -> Silver; TV4 reads them, never recomputes.
+TV3_DERIVED_COLUMNS = {
+    "sensor_telemetry": ["is_anomaly_flag"],      # Hampel OR rolling Z-score
+    "weather": ["thi_index", "is_heat_stress"],   # THI, stress when THI > 72
+}
+# TV3 keeps FAO "DAIRY" from long Bronze and "Dairy Price Index" from wide Bronze.
+FAO_DAIRY_INDEX_NAMES = ["DAIRY", "Dairy Price Index"]
+
 
 # ---------------------------------------------------------------- helpers
 
-def scan_silver(table: str) -> pl.LazyFrame | None:
-    uri = get_silver_table_uri(table)
+def silver_uri(table: str, silver_root: str | None = None) -> str:
+    """Same layout as run_governance --silver-root; default is MinIO."""
+    if silver_root is None:
+        return get_silver_table_uri(table)
+    root = silver_root.rstrip("/\\")
+    return f"{root}/{table}" if root.startswith("s3://") else str((Path(root) / table).resolve())
+
+
+def require_governed(lf: pl.LazyFrame, table: str) -> pl.LazyFrame:
+    """Accept only Silver produced by TV3 and keep gate-approved rows."""
+    names = lf.collect_schema().names()
+    missing = [c for c in GOVERNANCE_COLUMNS + TV3_DERIVED_COLUMNS.get(table, []) if c not in names]
+    if missing:
+        raise SystemExit(
+            f"Silver {table} is missing {missing}: load it with "
+            f"'python -m data_governance.run_governance --table {table}' (TV3) first."
+        )
+    return lf.filter(pl.col("_quality_status").is_in(GOVERNED_STATUSES))
+
+
+def scan_silver(table: str, silver_root: str | None = None) -> pl.LazyFrame | None:
+    uri = silver_uri(table, silver_root)
     opts = get_storage_options()
     if not DeltaTable.is_deltatable(uri, storage_options=opts):
         print(f"[skip] Silver table not found: {uri}")
         return None
-    return pl.scan_delta(uri, storage_options=opts)
+    return require_governed(pl.scan_delta(uri, storage_options=opts), table)
 
 
 def _local(col: str) -> pl.Expr:
@@ -35,11 +67,6 @@ def date_key_expr(col: str) -> pl.Expr:
 
 def time_key_expr(col: str) -> pl.Expr:
     return _local(col).dt.hour().cast(pl.UInt16) * 100 + _local(col).dt.minute().cast(pl.UInt16)
-
-
-def thi_expr(temp_col: str, rh_col: str) -> pl.Expr:
-    t, rh = pl.col(temp_col), pl.col(rh_col)
-    return (1.8 * t + 32) - (0.55 - 0.0055 * rh) * (1.8 * t - 26)
 
 
 def _with_key(df: pl.DataFrame, key: str, dtype) -> pl.DataFrame:
@@ -132,16 +159,15 @@ def build_dim_farm(valid_from: date) -> pl.DataFrame:
 # ------------------------------------------------------------------ facts
 
 def build_fact_sensor(sensor: pl.LazyFrame, dim_line: pl.DataFrame, dim_batch: pl.DataFrame) -> pl.LazyFrame:
-    if "is_anomaly_flag" not in sensor.collect_schema().names():
-        sensor = sensor.with_columns(is_anomaly_flag=pl.lit(0))
     return (
+        # TV3 rejects duplicates inside one Bronze file; re-landed files can still overlap.
         sensor.unique(["line_id", "timestamp"], keep="last")
         .join(dim_line.lazy().select("line_id", "line_key"), on="line_id", how="left")
         .join(dim_batch.lazy().select("batch_id", "batch_key"), on="batch_id", how="left")
         .with_columns(
             date_key=date_key_expr("timestamp"),
             time_key=time_key_expr("timestamp"),
-            is_anomaly_flag=pl.col("is_anomaly_flag").cast(pl.UInt8),
+            is_anomaly_flag=pl.col("is_anomaly_flag").fill_null(False).cast(pl.UInt8),  # TV3 bool -> 0/1
         )
         .select(column_names("fact_sensor_telemetry"))
     )
@@ -188,20 +214,19 @@ def build_fact_batch(mes: pl.DataFrame, fact_sensor: pl.LazyFrame, dims: dict, b
 
 def build_fact_external(weather, prices, indices, dim_farm: pl.DataFrame) -> pl.DataFrame | None:
     if weather is None:
-        print("[skip] fact_external_market_weather: Silver weather not available yet (TV3)")
+        print("[skip] fact_external_market_weather: no Silver weather (run data_governance.run_governance --table weather)")
         return None
-    cols = weather.collect_schema().names()
-    thi = pl.col("thi_index") if "thi_index" in cols else thi_expr("temperature_c", "relative_humidity_pct")
     daily = (
-        weather.with_columns(full_date=_local("observed_at").dt.date(), thi=thi)
+        weather.with_columns(full_date=_local("observed_at").dt.date())
         .group_by("farm_id", "full_date")
         .agg(
             temperature_avg_c=pl.col("temperature_c").mean(),
             humidity_avg_pct=pl.col("relative_humidity_pct").mean(),
             precipitation_mm=pl.col("precipitation_mm").sum(),
-            thi_index=pl.col("thi").max(),  # daily peak THI
+            thi_index=pl.col("thi_index").max(),  # daily peak of TV3's hourly THI
+            is_heat_stress=pl.col("is_heat_stress").any(),  # any stressed hour (TV3 rule)
         )
-        .with_columns(is_heat_stress=(pl.col("thi_index") >= THI_THRESHOLD_STRESS).cast(pl.UInt8))
+        .with_columns(pl.col("is_heat_stress").cast(pl.UInt8))
         .sort("full_date")
         .collect()
     )
@@ -220,9 +245,10 @@ def build_fact_external(weather, prices, indices, dim_farm: pl.DataFrame) -> pl.
         daily = daily.join_asof(gdt, on="full_date", strategy="backward")
     if indices is not None:
         fao = (
-            indices.filter(pl.col("index_name") == "DAIRY")
+            indices.filter(pl.col("index_name").is_in(FAO_DAIRY_INDEX_NAMES))
             .select(full_date=pl.col("period_start"), fao_dairy_index=pl.col("index_value"))
             .sort("full_date")
+            .unique("full_date", keep="last", maintain_order=True)  # same month in several crawls
             .collect()
         )
         daily = daily.join_asof(fao, on="full_date", strategy="backward")
@@ -239,6 +265,8 @@ def main():
     parser.add_argument("--out", default=GOLD_LOCAL_PATH)
     parser.add_argument("--date-from", default="2024-01-01")
     parser.add_argument("--date-to", default="2027-12-31")
+    parser.add_argument("--silver-root", default=None,
+                        help="Same value as run_governance --silver-root (default: MinIO)")
     args = parser.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -247,10 +275,14 @@ def main():
         df.write_parquet(out / f"{name}.parquet")
         print(f"{name:32s} {df.height:>10,} rows")
 
-    sensor = scan_silver("sensor_telemetry")
-    mes_lf = scan_silver("mes_lims")
+    def scan(table: str) -> pl.LazyFrame | None:
+        return scan_silver(table, args.silver_root)
+
+    sensor = scan("sensor_telemetry")
+    mes_lf = scan("mes_lims")
     if sensor is None or mes_lf is None:
-        raise SystemExit("Need Silver sensor_telemetry and mes_lims first (HuongdanChayProject.md, step 5).")
+        raise SystemExit("Need governed Silver sensor_telemetry and mes_lims first (HuongdanChayProject.md, step 5).")
+    # SCD Type 1: a batch re-landed in a newer Bronze file overrides the older one.
     mes = mes_lf.sort("_ingested_at").unique("batch_id", keep="last", maintain_order=True).collect()
 
     dims = {
@@ -268,7 +300,7 @@ def main():
     write(fact_sensor, "fact_sensor_telemetry")
     write(build_fact_batch(mes, fact_sensor.lazy(), dims, load_batch_farm_map()), "fact_batch_production")
 
-    ext = build_fact_external(scan_silver("weather"), scan_silver("market_prices"), scan_silver("market_indices"), dims["dim_farm"])
+    ext = build_fact_external(scan("weather"), scan("market_prices"), scan("market_indices"), dims["dim_farm"])
     if ext is not None:
         write(ext, "fact_external_market_weather")
 

@@ -1,0 +1,633 @@
+{
+  "evidence_version": 1,
+  "captured_at": "2026-10-19T02:57:05.108734+00:00",
+  "marquez_endpoint": "http://localhost:5000",
+  "subject": {
+    "namespace": "smart-dairy-factory",
+    "job_name": "bronze_to_silver.sensor_telemetry",
+    "latest_run_state": "COMPLETED",
+    "input_datasets": [
+      "file://bronze/sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet"
+    ],
+    "output_datasets": [
+      "s3://smart-dairy-lakehouse/02_silver_curated/sensor_telemetry"
+    ]
+  },
+  "api_responses": {
+    "job": {
+      "id": {
+        "namespace": "smart-dairy-factory",
+        "name": "bronze_to_silver.sensor_telemetry"
+      },
+      "type": "BATCH",
+      "name": "bronze_to_silver.sensor_telemetry",
+      "simpleName": "bronze_to_silver.sensor_telemetry",
+      "parentJobName": null,
+      "parentJobUuid": null,
+      "createdAt": "2026-10-15T17:16:00.679615Z",
+      "updatedAt": "2026-10-16T06:51:44.745202Z",
+      "namespace": "smart-dairy-factory",
+      "inputs": [
+        {
+          "namespace": "file://bronze",
+          "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet"
+        }
+      ],
+      "outputs": [
+        {
+          "namespace": "s3://smart-dairy-lakehouse",
+          "name": "02_silver_curated/sensor_telemetry"
+        }
+      ],
+      "location": null,
+      "description": null,
+      "latestRun": {
+        "id": "13dbfb7c-fd58-43e2-9bcc-ca4d03306fec",
+        "createdAt": "2026-10-16T06:51:44.124766Z",
+        "updatedAt": "2026-10-16T06:51:44.745202Z",
+        "nominalStartTime": null,
+        "nominalEndTime": null,
+        "state": "COMPLETED",
+        "startedAt": "2026-10-16T06:51:44.124766Z",
+        "endedAt": "2026-10-16T06:51:44.745202Z",
+        "durationMs": 621,
+        "args": {},
+        "jobVersion": {
+          "namespace": "smart-dairy-factory",
+          "name": "bronze_to_silver.sensor_telemetry",
+          "version": "e0c109b4-6edf-3f1b-a6ea-30256d3899a5"
+        },
+        "inputDatasetVersions": [
+          {
+            "datasetVersionId": {
+              "namespace": "file://bronze",
+              "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+              "version": "495c8f8c-1146-387a-9ff3-42d74b41a51c"
+            },
+            "facets": {}
+          }
+        ],
+        "outputDatasetVersions": [
+          {
+            "datasetVersionId": {
+              "namespace": "s3://smart-dairy-lakehouse",
+              "name": "02_silver_curated/sensor_telemetry",
+              "version": "e2bef2c6-e8ab-32c3-aa05-218f8f7d8745"
+            },
+            "facets": {}
+          }
+        ],
+        "facets": {
+          "tags": {
+            "tags": [
+              {
+                "key": "openlineage_client_version",
+                "value": "1.54.0",
+                "source": "OPENLINEAGE_CLIENT"
+              }
+            ],
+            "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+            "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+          }
+        }
+      },
+      "latestRuns": [
+        {
+          "id": "13dbfb7c-fd58-43e2-9bcc-ca4d03306fec",
+          "createdAt": "2026-10-16T06:51:44.124766Z",
+          "updatedAt": "2026-10-16T06:51:44.745202Z",
+          "nominalStartTime": null,
+          "nominalEndTime": null,
+          "state": "COMPLETED",
+          "startedAt": "2026-10-16T06:51:44.124766Z",
+          "endedAt": "2026-10-16T06:51:44.745202Z",
+          "durationMs": 621,
+          "args": {},
+          "jobVersion": {
+            "namespace": "smart-dairy-factory",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "version": "e0c109b4-6edf-3f1b-a6ea-30256d3899a5"
+          },
+          "inputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+                "version": "495c8f8c-1146-387a-9ff3-42d74b41a51c"
+              },
+              "facets": {}
+            }
+          ],
+          "outputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry",
+                "version": "e2bef2c6-e8ab-32c3-aa05-218f8f7d8745"
+              },
+              "facets": {}
+            }
+          ],
+          "facets": {
+            "tags": {
+              "tags": [
+                {
+                  "key": "openlineage_client_version",
+                  "value": "1.54.0",
+                  "source": "OPENLINEAGE_CLIENT"
+                }
+              ],
+              "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+              "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+            }
+          }
+        },
+        {
+          "id": "216e8713-c31e-4bd3-a25a-6afbf128eb62",
+          "createdAt": "2026-10-16T06:51:13.759360Z",
+          "updatedAt": "2026-10-16T06:51:16.634232Z",
+          "nominalStartTime": null,
+          "nominalEndTime": null,
+          "state": "COMPLETED",
+          "startedAt": "2026-10-16T06:51:13.759360Z",
+          "endedAt": "2026-10-16T06:51:16.634232Z",
+          "durationMs": 2875,
+          "args": {},
+          "jobVersion": {
+            "namespace": "smart-dairy-factory",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "version": "e0c109b4-6edf-3f1b-a6ea-30256d3899a5"
+          },
+          "inputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+                "version": "495c8f8c-1146-387a-9ff3-42d74b41a51c"
+              },
+              "facets": {}
+            }
+          ],
+          "outputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry",
+                "version": "e21ff517-6df9-3a89-8737-d9fb60ff9fb7"
+              },
+              "facets": {}
+            }
+          ],
+          "facets": {
+            "tags": {
+              "tags": [
+                {
+                  "key": "openlineage_client_version",
+                  "value": "1.54.0",
+                  "source": "OPENLINEAGE_CLIENT"
+                }
+              ],
+              "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+              "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+            }
+          }
+        },
+        {
+          "id": "46a41301-f17d-4325-8e91-f2631c8cca5e",
+          "createdAt": "2026-10-16T06:48:53.225642Z",
+          "updatedAt": "2026-10-16T06:48:55.818003Z",
+          "nominalStartTime": null,
+          "nominalEndTime": null,
+          "state": "FAILED",
+          "startedAt": "2026-10-16T06:48:53.225642Z",
+          "endedAt": "2026-10-16T06:48:55.818003Z",
+          "durationMs": 2593,
+          "args": {},
+          "jobVersion": {
+            "namespace": "smart-dairy-factory",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "version": "e0c109b4-6edf-3f1b-a6ea-30256d3899a5"
+          },
+          "inputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+                "version": "495c8f8c-1146-387a-9ff3-42d74b41a51c"
+              },
+              "facets": {}
+            }
+          ],
+          "outputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry",
+                "version": "3d12478e-8f72-3c4c-84f0-913f33c0d3d7"
+              },
+              "facets": {}
+            }
+          ],
+          "facets": {
+            "tags": {
+              "tags": [
+                {
+                  "key": "openlineage_client_version",
+                  "value": "1.54.0",
+                  "source": "OPENLINEAGE_CLIENT"
+                }
+              ],
+              "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+              "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+            }
+          }
+        },
+        {
+          "id": "4a4e7cd8-cd4d-4d8a-b3c8-aab1e641b446",
+          "createdAt": "2026-10-15T17:16:00.679615Z",
+          "updatedAt": "2026-10-15T17:16:01.822856Z",
+          "nominalStartTime": null,
+          "nominalEndTime": null,
+          "state": "COMPLETED",
+          "startedAt": "2026-10-15T17:16:00.679615Z",
+          "endedAt": "2026-10-15T17:16:01.822856Z",
+          "durationMs": 1143,
+          "args": {},
+          "jobVersion": {
+            "namespace": "smart-dairy-factory",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "version": "44208ff1-30fb-3dbf-aca1-a765faac942f"
+          },
+          "inputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/smoke.parquet",
+                "version": "b3187381-2b2e-351c-893f-24f593c68e67"
+              },
+              "facets": {}
+            }
+          ],
+          "outputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry",
+                "version": "0d11d5e6-a3ad-3dbc-88f3-a3b85f3bb4b6"
+              },
+              "facets": {}
+            }
+          ],
+          "facets": {
+            "tags": {
+              "tags": [
+                {
+                  "key": "openlineage_client_version",
+                  "value": "1.54.0",
+                  "source": "OPENLINEAGE_CLIENT"
+                }
+              ],
+              "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+              "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+            }
+          }
+        }
+      ],
+      "facets": {},
+      "currentVersion": "2f077cba-f5da-4248-ad98-1c4dde452252",
+      "labels": [],
+      "tags": []
+    },
+    "runs": {
+      "runs": [
+        {
+          "id": "13dbfb7c-fd58-43e2-9bcc-ca4d03306fec",
+          "createdAt": "2026-10-16T06:51:44.124766Z",
+          "updatedAt": "2026-10-16T06:51:44.745202Z",
+          "nominalStartTime": null,
+          "nominalEndTime": null,
+          "state": "COMPLETED",
+          "startedAt": "2026-10-16T06:51:44.124766Z",
+          "endedAt": "2026-10-16T06:51:44.745202Z",
+          "durationMs": 621,
+          "args": {},
+          "jobVersion": {
+            "namespace": "smart-dairy-factory",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "version": "e0c109b4-6edf-3f1b-a6ea-30256d3899a5"
+          },
+          "inputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+                "version": "495c8f8c-1146-387a-9ff3-42d74b41a51c"
+              },
+              "facets": {}
+            }
+          ],
+          "outputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry",
+                "version": "e2bef2c6-e8ab-32c3-aa05-218f8f7d8745"
+              },
+              "facets": {}
+            }
+          ],
+          "facets": {
+            "tags": {
+              "tags": [
+                {
+                  "key": "openlineage_client_version",
+                  "value": "1.54.0",
+                  "source": "OPENLINEAGE_CLIENT"
+                }
+              ],
+              "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+              "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+            }
+          }
+        },
+        {
+          "id": "216e8713-c31e-4bd3-a25a-6afbf128eb62",
+          "createdAt": "2026-10-16T06:51:13.759360Z",
+          "updatedAt": "2026-10-16T06:51:16.634232Z",
+          "nominalStartTime": null,
+          "nominalEndTime": null,
+          "state": "COMPLETED",
+          "startedAt": "2026-10-16T06:51:13.759360Z",
+          "endedAt": "2026-10-16T06:51:16.634232Z",
+          "durationMs": 2875,
+          "args": {},
+          "jobVersion": {
+            "namespace": "smart-dairy-factory",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "version": "e0c109b4-6edf-3f1b-a6ea-30256d3899a5"
+          },
+          "inputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+                "version": "495c8f8c-1146-387a-9ff3-42d74b41a51c"
+              },
+              "facets": {}
+            }
+          ],
+          "outputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry",
+                "version": "e21ff517-6df9-3a89-8737-d9fb60ff9fb7"
+              },
+              "facets": {}
+            }
+          ],
+          "facets": {
+            "tags": {
+              "tags": [
+                {
+                  "key": "openlineage_client_version",
+                  "value": "1.54.0",
+                  "source": "OPENLINEAGE_CLIENT"
+                }
+              ],
+              "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+              "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+            }
+          }
+        },
+        {
+          "id": "46a41301-f17d-4325-8e91-f2631c8cca5e",
+          "createdAt": "2026-10-16T06:48:53.225642Z",
+          "updatedAt": "2026-10-16T06:48:55.818003Z",
+          "nominalStartTime": null,
+          "nominalEndTime": null,
+          "state": "FAILED",
+          "startedAt": "2026-10-16T06:48:53.225642Z",
+          "endedAt": "2026-10-16T06:48:55.818003Z",
+          "durationMs": 2593,
+          "args": {},
+          "jobVersion": {
+            "namespace": "smart-dairy-factory",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "version": "e0c109b4-6edf-3f1b-a6ea-30256d3899a5"
+          },
+          "inputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+                "version": "495c8f8c-1146-387a-9ff3-42d74b41a51c"
+              },
+              "facets": {}
+            }
+          ],
+          "outputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry",
+                "version": "3d12478e-8f72-3c4c-84f0-913f33c0d3d7"
+              },
+              "facets": {}
+            }
+          ],
+          "facets": {
+            "tags": {
+              "tags": [
+                {
+                  "key": "openlineage_client_version",
+                  "value": "1.54.0",
+                  "source": "OPENLINEAGE_CLIENT"
+                }
+              ],
+              "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+              "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+            }
+          }
+        },
+        {
+          "id": "4a4e7cd8-cd4d-4d8a-b3c8-aab1e641b446",
+          "createdAt": "2026-10-15T17:16:00.679615Z",
+          "updatedAt": "2026-10-15T17:16:01.822856Z",
+          "nominalStartTime": null,
+          "nominalEndTime": null,
+          "state": "COMPLETED",
+          "startedAt": "2026-10-15T17:16:00.679615Z",
+          "endedAt": "2026-10-15T17:16:01.822856Z",
+          "durationMs": 1143,
+          "args": {},
+          "jobVersion": {
+            "namespace": "smart-dairy-factory",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "version": "44208ff1-30fb-3dbf-aca1-a765faac942f"
+          },
+          "inputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/smoke.parquet",
+                "version": "b3187381-2b2e-351c-893f-24f593c68e67"
+              },
+              "facets": {}
+            }
+          ],
+          "outputDatasetVersions": [
+            {
+              "datasetVersionId": {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry",
+                "version": "0d11d5e6-a3ad-3dbc-88f3-a3b85f3bb4b6"
+              },
+              "facets": {}
+            }
+          ],
+          "facets": {
+            "tags": {
+              "tags": [
+                {
+                  "key": "openlineage_client_version",
+                  "value": "1.54.0",
+                  "source": "OPENLINEAGE_CLIENT"
+                }
+              ],
+              "_producer": "https://github.com/OpenLineage/OpenLineage/tree/1.54.0/client/python",
+              "_schemaURL": "https://openlineage.io/spec/facets/1-0-0/TagsRunFacet.json#/$defs/TagsRunFacet"
+            }
+          }
+        }
+      ],
+      "totalCount": 4
+    },
+    "lineage": {
+      "graph": [
+        {
+          "id": "dataset:file://bronze:sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+          "type": "DATASET",
+          "data": {
+            "id": {
+              "namespace": "file://bronze",
+              "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet"
+            },
+            "type": "DB_TABLE",
+            "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+            "physicalName": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+            "createdAt": "2026-10-16T06:48:53.225642Z",
+            "updatedAt": "2026-10-16T06:51:44.745202Z",
+            "namespace": "file://bronze",
+            "sourceName": "default",
+            "fields": [],
+            "tags": [],
+            "lastModifiedAt": null,
+            "description": null,
+            "lastLifecycleState": ""
+          },
+          "inEdges": [],
+          "outEdges": [
+            {
+              "origin": "dataset:file://bronze:sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+              "destination": "job:smart-dairy-factory:bronze_to_silver.sensor_telemetry"
+            }
+          ]
+        },
+        {
+          "id": "dataset:s3://smart-dairy-lakehouse:02_silver_curated/sensor_telemetry",
+          "type": "DATASET",
+          "data": {
+            "id": {
+              "namespace": "s3://smart-dairy-lakehouse",
+              "name": "02_silver_curated/sensor_telemetry"
+            },
+            "type": "DB_TABLE",
+            "name": "02_silver_curated/sensor_telemetry",
+            "physicalName": "02_silver_curated/sensor_telemetry",
+            "createdAt": "2026-10-15T17:16:00.679615Z",
+            "updatedAt": "2026-10-16T06:51:45.003185Z",
+            "namespace": "s3://smart-dairy-lakehouse",
+            "sourceName": "default",
+            "fields": [],
+            "tags": [],
+            "lastModifiedAt": null,
+            "description": null,
+            "lastLifecycleState": ""
+          },
+          "inEdges": [
+            {
+              "origin": "job:smart-dairy-factory:bronze_to_silver.sensor_telemetry",
+              "destination": "dataset:s3://smart-dairy-lakehouse:02_silver_curated/sensor_telemetry"
+            }
+          ],
+          "outEdges": []
+        },
+        {
+          "id": "job:smart-dairy-factory:bronze_to_silver.sensor_telemetry",
+          "type": "JOB",
+          "data": {
+            "id": {
+              "namespace": "smart-dairy-factory",
+              "name": "bronze_to_silver.sensor_telemetry"
+            },
+            "type": "BATCH",
+            "name": "bronze_to_silver.sensor_telemetry",
+            "simpleName": "bronze_to_silver.sensor_telemetry",
+            "parentJobName": null,
+            "parentJobUuid": null,
+            "createdAt": "2026-10-15T17:16:00.679615Z",
+            "updatedAt": "2026-10-16T06:51:44.745202Z",
+            "namespace": "smart-dairy-factory",
+            "inputs": [
+              {
+                "namespace": "file://bronze",
+                "name": "sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet"
+              }
+            ],
+            "outputs": [
+              {
+                "namespace": "s3://smart-dairy-lakehouse",
+                "name": "02_silver_curated/sensor_telemetry"
+              }
+            ],
+            "location": null,
+            "description": null,
+            "latestRun": {
+              "id": "13dbfb7c-fd58-43e2-9bcc-ca4d03306fec",
+              "createdAt": "2026-10-16T06:51:44.124766Z",
+              "updatedAt": "2026-10-16T06:51:44.745202Z",
+              "nominalStartTime": null,
+              "nominalEndTime": null,
+              "state": "COMPLETED",
+              "startedAt": "2026-10-16T06:51:44.124766Z",
+              "endedAt": "2026-10-16T06:51:44.745202Z",
+              "durationMs": 621,
+              "args": {},
+              "jobVersion": {
+                "namespace": "smart-dairy-factory",
+                "name": "bronze_to_silver.sensor_telemetry",
+                "version": "2f077cba-f5da-4248-ad98-1c4dde452252"
+              },
+              "inputDatasetVersions": [],
+              "outputDatasetVersions": [],
+              "facets": {}
+            }
+          },
+          "inEdges": [
+            {
+              "origin": "dataset:file://bronze:sensor_telemetry/sensor_telemetry_20261010_051357_098374.parquet",
+              "destination": "job:smart-dairy-factory:bronze_to_silver.sensor_telemetry"
+            }
+          ],
+          "outEdges": [
+            {
+              "origin": "job:smart-dairy-factory:bronze_to_silver.sensor_telemetry",
+              "destination": "dataset:s3://smart-dairy-lakehouse:02_silver_curated/sensor_telemetry"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}
