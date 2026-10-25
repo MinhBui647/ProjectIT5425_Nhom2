@@ -267,6 +267,8 @@ def main():
     parser.add_argument("--date-to", default="2027-12-31")
     parser.add_argument("--silver-root", default=None,
                         help="Same value as run_governance --silver-root (default: MinIO)")
+    parser.add_argument("--upload-minio", action="store_true",
+                        help="Also upload the Gold Parquet files to s3://<bucket>/03_gold_marts/")
     args = parser.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -303,6 +305,12 @@ def main():
     ext = build_fact_external(scan("weather"), scan("market_prices"), scan("market_indices"), dims["dim_farm"])
     if ext is not None:
         write(ext, "fact_external_market_weather")
+
+    if args.upload_minio:
+        from olap_engineering.gold_store import upload_gold_dir
+
+        for key, size in upload_gold_dir(out).items():
+            print(f"[minio] {key:48s} {size:>12,} bytes")
 
 
 if __name__ == "__main__":

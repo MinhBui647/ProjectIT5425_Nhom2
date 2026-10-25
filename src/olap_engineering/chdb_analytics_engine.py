@@ -4,6 +4,7 @@ from pathlib import Path
 
 from chdb import session as chs
 
+from olap_engineering.gold_store import chdb_s3_source
 from olap_engineering.star_schema import GOLD_TABLES, column_names, create_table_sql
 
 DB = "dairy"
@@ -120,7 +121,8 @@ class ChdbAnalyticsEngine:
     def query(self, sql: str, fmt: str = "DataFrame"):
         return self.sess.query(sql, fmt)
 
-    def build(self, gold_dir: str = DEFAULT_GOLD_DIR) -> None:
+    def build(self, gold_dir: str = DEFAULT_GOLD_DIR, from_minio: bool = False) -> None:
+        """Load Gold into chDB from local Parquet, or from MinIO when from_minio."""
         gold = Path(gold_dir).resolve()
         self.sess.query(f"CREATE DATABASE IF NOT EXISTS {DB}")
         for table in GOLD_TABLES:
@@ -129,15 +131,21 @@ class ChdbAnalyticsEngine:
         for stmt in AGG_MINUTE_DDL:  # MV must exist before the fact insert
             self.sess.query(stmt)
         for table in GOLD_TABLES:
-            src = gold / f"{table}.parquet"
-            if not src.exists():
-                print(f"[skip] {src} not found")
-                continue
             cols = ", ".join(f"`{c}`" for c in column_names(table))
-            self.sess.query(
-                f"INSERT INTO {DB}.{table} ({cols}) "
-                f"SELECT {cols} FROM file('{src.as_posix()}', Parquet)"
-            )
+            if from_minio:
+                source = chdb_s3_source(table)
+            else:
+                src = gold / f"{table}.parquet"
+                if not src.exists():
+                    print(f"[skip] {src} not found")
+                    continue
+                source = f"file('{src.as_posix()}', Parquet)"
+            try:
+                self.sess.query(f"INSERT INTO {DB}.{table} ({cols}) SELECT {cols} FROM {source}")
+            except Exception as exc:  # e.g. weather fact not uploaded to MinIO yet
+                if not from_minio:
+                    raise
+                print(f"[skip] {table}: {str(exc).splitlines()[0][:120]}")
         self.sess.query(f"OPTIMIZE TABLE {DB}.agg_sensor_minute FINAL")
 
     def table_sizes(self):
@@ -166,11 +174,13 @@ def main():
     parser.add_argument("--export-features", action="store_true")
     parser.add_argument("--gold-dir", default=DEFAULT_GOLD_DIR)
     parser.add_argument("--db-path", default=DEFAULT_DB_PATH)
+    parser.add_argument("--from-minio", action="store_true",
+                        help="--build reads Gold from MinIO; --export-features also writes to MinIO")
     args = parser.parse_args()
 
     engine = ChdbAnalyticsEngine(args.db_path)
     if args.build:
-        engine.build(args.gold_dir)
+        engine.build(args.gold_dir, from_minio=args.from_minio)
         print(engine.table_sizes())
     if args.demo:
         for name in ANALYTICS_QUERIES:
@@ -183,6 +193,13 @@ def main():
         out = Path(args.gold_dir) / "batch_features.parquet"
         engine.batch_features().to_parquet(out, index=False)
         print(f"Saved {out}")
+        if args.from_minio:  # container has no boto3: let ClickHouse write the object
+            engine.sess.query(
+                f"INSERT INTO FUNCTION {chdb_s3_source('batch_features')} "
+                f"SELECT * FROM file('{out.resolve().as_posix()}', Parquet) "
+                "SETTINGS s3_truncate_on_insert = 1"
+            )
+            print("Saved s3://.../03_gold_marts/batch_features.parquet")
 
 
 if __name__ == "__main__":
