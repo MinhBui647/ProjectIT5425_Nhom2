@@ -1,0 +1,41 @@
+﻿scenario,description,method,n_rep,inject_at,horizon,detect_rate,detect_within_10_rate,mean_delay_subgroups,median_delay_subgroups,false_alarm_before_rate
+khong_bat_thuong,"Quy trình ổn định, dùng để đo báo động giả",shewhart_3sigma,200,100,400,0.615,0.015,134.16260162601625,118.0,0.205
+khong_bat_thuong,"Quy trình ổn định, dùng để đo báo động giả",shewhart_nelson,200,100,400,0.995,0.13,65.2713567839196,52.0,0.67
+khong_bat_thuong,"Quy trình ổn định, dùng để đo báo động giả",cusum,200,100,400,0.46,0.0,150.32608695652175,148.0,0.185
+khong_bat_thuong,"Quy trình ổn định, dùng để đo báo động giả",ewma,200,100,400,0.43,0.0,159.2325581395349,169.5,0.175
+khong_bat_thuong,"Quy trình ổn định, dùng để đo báo động giả",s_chart,200,100,400,0.605,0.04,114.24793388429752,95.0,0.205
+lech_muc_0.5sigma,"Giá trị trung bình lệch +0,5 sigma từ điểm chèn",shewhart_3sigma,200,100,400,0.82,0.07,109.28048780487805,96.5,0.255
+lech_muc_0.5sigma,"Giá trị trung bình lệch +0,5 sigma từ điểm chèn",shewhart_nelson,200,100,400,1.0,0.285,27.9,19.0,0.785
+lech_muc_0.5sigma,"Giá trị trung bình lệch +0,5 sigma từ điểm chèn",cusum,200,100,400,1.0,0.16,35.34,24.5,0.215
+lech_muc_0.5sigma,"Giá trị trung bình lệch +0,5 sigma từ điểm chèn",ewma,200,100,400,1.0,0.13,40.16,33.0,0.195
+lech_muc_0.5sigma,"Giá trị trung bình lệch +0,5 sigma từ điểm chèn",s_chart,200,100,400,0.55,0.04,127.15454545454546,112.5,0.275
+lech_muc_1.0sigma,"Giá trị trung bình lệch +1,0 sigma từ điểm chèn",shewhart_3sigma,200,100,400,1.0,0.195,47.98,32.0,0.245
+lech_muc_1.0sigma,"Giá trị trung bình lệch +1,0 sigma từ điểm chèn",shewhart_nelson,200,100,400,1.0,0.685,8.335,7.0,0.725
+lech_muc_1.0sigma,"Giá trị trung bình lệch +1,0 sigma từ điểm chèn",cusum,200,100,400,1.0,0.655,9.415,8.0,0.195
+lech_muc_1.0sigma,"Giá trị trung bình lệch +1,0 sigma từ điểm chèn",ewma,200,100,400,1.0,0.575,10.185,9.0,0.165
+lech_muc_1.0sigma,"Giá trị trung bình lệch +1,0 sigma từ điểm chèn",s_chart,200,100,400,0.54,0.045,124.4074074074074,117.5,0.215
+lech_muc_1.5sigma,"Giá trị trung bình lệch +1,5 sigma từ điểm chèn",shewhart_3sigma,200,100,400,1.0,0.52,14.07,10.0,0.295
+lech_muc_1.5sigma,"Giá trị trung bình lệch +1,5 sigma từ điểm chèn",shewhart_nelson,200,100,400,1.0,0.98,4.235,4.0,0.765
+lech_muc_1.5sigma,"Giá trị trung bình lệch +1,5 sigma từ điểm chèn",cusum,200,100,400,1.0,0.985,5.065,5.0,0.21
+lech_muc_1.5sigma,"Giá trị trung bình lệch +1,5 sigma từ điểm chèn",ewma,200,100,400,1.0,0.965,5.41,5.0,0.2
+lech_muc_1.5sigma,"Giá trị trung bình lệch +1,5 sigma từ điểm chèn",s_chart,200,100,400,0.585,0.02,122.88034188034187,109.0,0.245
+lech_muc_2.0sigma,"Giá trị trung bình lệch +2,0 sigma từ điểm chèn",shewhart_3sigma,200,100,400,1.0,0.83,6.085,5.0,0.245
+lech_muc_2.0sigma,"Giá trị trung bình lệch +2,0 sigma từ điểm chèn",shewhart_nelson,200,100,400,1.0,0.995,2.885,3.0,0.755
+lech_muc_2.0sigma,"Giá trị trung bình lệch +2,0 sigma từ điểm chèn",cusum,200,100,400,1.0,1.0,3.68,4.0,0.22
+lech_muc_2.0sigma,"Giá trị trung bình lệch +2,0 sigma từ điểm chèn",ewma,200,100,400,1.0,1.0,3.73,4.0,0.205
+lech_muc_2.0sigma,"Giá trị trung bình lệch +2,0 sigma từ điểm chèn",s_chart,200,100,400,0.48,0.015,127.08333333333333,111.0,0.26
+troi_dan,"Trôi tuyến tính +0,03 sigma mỗi nhóm con (giống đóng cặn dần)",shewhart_3sigma,200,100,400,1.0,0.02,43.06,45.0,0.215
+troi_dan,"Trôi tuyến tính +0,03 sigma mỗi nhóm con (giống đóng cặn dần)",shewhart_nelson,200,100,400,1.0,0.155,23.21,24.0,0.745
+troi_dan,"Trôi tuyến tính +0,03 sigma mỗi nhóm con (giống đóng cặn dần)",cusum,200,100,400,1.0,0.04,27.595,28.5,0.16
+troi_dan,"Trôi tuyến tính +0,03 sigma mỗi nhóm con (giống đóng cặn dần)",ewma,200,100,400,1.0,0.02,29.315,29.5,0.14
+troi_dan,"Trôi tuyến tính +0,03 sigma mỗi nhóm con (giống đóng cặn dần)",s_chart,200,100,400,0.52,0.02,140.27884615384616,146.5,0.255
+dot_bien_4sigma,Một điểm đột biến +4 sigma rồi trở lại bình thường,shewhart_3sigma,200,100,400,0.95,0.9,8.463157894736842,1.0,0.22
+dot_bien_4sigma,Một điểm đột biến +4 sigma rồi trở lại bình thường,shewhart_nelson,200,100,400,0.995,0.92,4.788944723618091,1.0,0.8
+dot_bien_4sigma,Một điểm đột biến +4 sigma rồi trở lại bình thường,cusum,200,100,400,0.65,0.335,76.34615384615384,6.5,0.205
+dot_bien_4sigma,Một điểm đột biến +4 sigma rồi trở lại bình thường,ewma,200,100,400,0.585,0.32,72.22222222222223,2.0,0.145
+dot_bien_4sigma,Một điểm đột biến +4 sigma rồi trở lại bình thường,s_chart,200,100,400,0.525,0.02,142.7904761904762,139.0,0.28
+tang_phan_tan_1.5x,"Độ phân tán tăng 1,5 lần (van hoặc cảm biến rung)",shewhart_3sigma,200,100,400,1.0,0.34,21.935,15.0,0.175
+tang_phan_tan_1.5x,"Độ phân tán tăng 1,5 lần (van hoặc cảm biến rung)",shewhart_nelson,200,100,400,1.0,0.575,13.165,9.0,0.73
+tang_phan_tan_1.5x,"Độ phân tán tăng 1,5 lần (van hoặc cảm biến rung)",cusum,200,100,400,1.0,0.215,35.655,26.0,0.185
+tang_phan_tan_1.5x,"Độ phân tán tăng 1,5 lần (van hoặc cảm biến rung)",ewma,200,100,400,1.0,0.245,45.475,30.0,0.175
+tang_phan_tan_1.5x,"Độ phân tán tăng 1,5 lần (van hoặc cảm biến rung)",s_chart,200,100,400,1.0,1.0,1.05,1.0,0.245

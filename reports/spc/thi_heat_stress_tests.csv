@@ -1,0 +1,5 @@
+﻿test,variable,n_group0,n_group1,median_group0,median_group1,statistic,p_value,effect_rank_biserial,note
+Mann-Whitney U,fat_in,194,46,3.502505302429199,3.5177125930786133,4100.0,0.393096901133136,-0.08112953832362169,
+Mann-Whitney U,protein_in,194,46,3.212259531021118,3.1785627603530884,2513.0,4.161000685169913e-06,-0.43679964141640515,
+Mann-Whitney U,yield_recovery_pct,194,46,94.6165542602539,94.9264030456543,4429.0,0.9387996520355694,-0.007395786642761082,
+Fisher exact,batch_defect_flag,194,46,,,2.2142857142857144,0.25157855721656336,,"bảng 2x2 [không stress: 186/8, stress: 42/4] (không lỗi/lỗi); statistic là odds ratio"
