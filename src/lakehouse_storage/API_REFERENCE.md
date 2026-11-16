@@ -179,3 +179,18 @@ vacuum_table(
 > [!WARNING]
 > **An toàn Dữ liệu**
 > Tham số `dry_run` được bật mặc định (`True`). Nếu chạy nguyên bản, nó chỉ đóng vai trò cảnh báo, in ra danh sách các file chuẩn bị xóa. Hãy truyền rõ ràng `dry_run=False` nếu muốn ra lệnh xóa thật trên MinIO S3.
+
+### Traceability corrections (storage demo, 2026-11-17)
+
+`get_version_at_date(table_uri, target_date)` selects the latest commit timestamp
+at or before the target, breaking equal timestamps by version. Naive targets
+mean UTC; explicit offsets retain their meaning. Before the first commit it
+returns `None`.
+
+`trace_batch()` preserves the existing keys. `lineage` is the first representative
+source; use the additive `lineage_sources` list for all distinct path/hash pairs.
+Each entry includes `integrity_verified` and `reason`. Overall integrity requires
+all sources to pass. Missing paths/files/hashes, unreadable files, checksum
+mismatches and conflicting expected hashes are reported without discarding other
+sources. Each path is hashed at most once. A damaged second source can therefore
+change overall integrity from true to false without changing any Silver rows.
