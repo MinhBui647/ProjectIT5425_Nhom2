@@ -1,0 +1,1 @@
+{"argv": ["/home/kh0ngm1nh/Documents/HUST/20261/Data management and visualization - IT5425/Project/ProjectIT5425_Nhom2/src/lakehouse_storage/benchmark.py", "--rows", "100000", "--batch-sizes", "1000,10000,50000", "--seed", "42", "--warmups", "1", "--repeats", "5", "--run-id", "measured_100k_20261117"]}

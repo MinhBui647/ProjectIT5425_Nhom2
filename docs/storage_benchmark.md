@@ -6,14 +6,13 @@ The harness owns a separate namespace for each invocation and refuses existing
 work/report directories. It never vacuums and never uses shared factory tables.
 
 ```bash
-MINIO_ENDPOINT=127.0.0.1:19000 MINIO_ACCESS_KEY=storagedemo \
+STORAGE_DEMO_REVISION=$(git rev-parse HEAD) MINIO_ENDPOINT=127.0.0.1:19000 MINIO_ACCESS_KEY=storagedemo \
 MINIO_SECRET_KEY=storage-demo-local-only PYTHONPATH=src \
 /tmp/storage-services-venv/bin/python -m lakehouse_storage.benchmark \
-  --rows 100000 --batch-sizes 1000,10000,50000 --seed 42 --warmups 1 --repeats 5 \
-  --run-id experiment_100k_20261117
+  --rows 100000 --batch-sizes 1000,10000,50000 --seed 42 --warmups 1 --repeats 5
 ```
 
-`--run-id` must be new for each run. For local Delta use
+The CLI generates a fresh run id by default; an explicit `--run-id` must be new. For local Delta use
 `--allow-root "$PWD/data/storage_benchmark" --silver-root "$PWD/data/storage_benchmark/TARGET/silver"`
 and a distinct CLI run id. Never combine local and S3 results into a single speedup.
 Batch sizes must divide the scale, with <=50k samples/batch and <=200 batches/run.
