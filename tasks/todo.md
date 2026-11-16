@@ -26,8 +26,8 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 - [x] T10: Maintenance policy và runner one-shot
 - [x] T11: Scheduler cùng process với runner
 - [x] T12: Lịch sử maintenance và kiểm chứng logical rows
-- [ ] T13: Docker Compose cho demo hai pha
-- [ ] T14: MinIO E2E cho demo và failure cases
+- [x] T13: Docker Compose cho demo hai pha
+- [x] T14: MinIO E2E cho demo và failure cases
 - [ ] T15: Benchmark harness có đối chiếu kết quả
 - [ ] T16: Chạy thực nghiệm và ghi kết quả thật
 - [ ] T17: Biểu đồ và diễn giải thực nghiệm
@@ -429,14 +429,14 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Image build được từ dependency constraints; mock và MinIO healthy; endpoints nội bộ dùng service hostname, không trùng host port với stack đang có.
-- [ ] Worker và maintenance dùng profiles/pha riêng; Bronze/state/payload/reports persist; trace dùng cùng absolute Bronze mount path.
-- [ ] Target demo root bắt buộc/allowlist, mock không cần MinIO secrets; instructions start-ingest-stop-maintain có command cụ thể, default vacuum preview.
+- [x] Image build được từ dependency constraints; mock và MinIO healthy; endpoints nội bộ dùng service hostname, không trùng host port với stack đang có.
+- [x] Worker và maintenance dùng profiles/pha riêng; Bronze/state/payload/reports persist; trace dùng cùng absolute Bronze mount path.
+- [x] Target demo root bắt buộc/allowlist, mock không cần MinIO secrets; instructions start-ingest-stop-maintain có command cụ thể, default vacuum preview.
 
 **Kiểm chứng:**
 
-- [ ] docker compose -f infra/docker-compose.storage.yml config; build; up theo profiles đã khai báo. Inspect health, ingest một run, stop worker sạch rồi mới bật maintenance. T01 constraints không được bỏ qua.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] docker compose -f infra/docker-compose.storage.yml config; build; up theo profiles đã khai báo. Inspect health, ingest một run, stop worker sạch rồi mới bật maintenance. T01 constraints không được bỏ qua.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T03, T09, T12
 
@@ -450,7 +450,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (5 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** Compose config/build succeed; pinned image/constraints pip check clean, mock+MinIO healthy, worker exit 0 (4001 rows), stopped-ingest maintenance 4 -> 1 files. See storage_operations.md for build DNS workaround.
 
 ### T14: MinIO E2E cho demo và failure cases
 
@@ -458,15 +458,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Normal S1/S2 -> Bronze -> P3 -> MinIO có counts/lineage đúng; replay known Bronze không tăng rows; invalid payload bị chặn đúng stage.
-- [ ] HTTP 500/timeout retry hữu hạn; worker restart ở state đã có path dùng lại file; PUBLISHING dở yêu cầu review và không âm thầm tiếp tục.
-- [ ] Worker dừng trước scheduler; compaction giữ query results, trace hai nguồn và version lookup đúng; vacuum preview không xóa.
+- [x] Normal S1/S2 -> Bronze -> P3 -> MinIO có counts/lineage đúng; replay known Bronze không tăng rows; invalid payload bị chặn đúng stage.
+- [x] HTTP 500/timeout retry hữu hạn; worker restart ở state đã có path dùng lại file; PUBLISHING dở yêu cầu review và không âm thầm tiếp tục.
+- [x] Worker dừng trước scheduler; compaction giữ query results, trace hai nguồn và version lookup đúng; vacuum preview không xóa.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_storage_minio_demo.py -m minio -q`
-- [ ] Đăng ký minio marker và fixture endpoint riêng trước chạy; dùng run-specific prefix, chỉ cleanup tài nguyên test sở hữu. Chạy nguyên trạng P3/OLAP/SPC suites hoặc ghi rõ skips môi trường.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_storage_minio_demo.py -m minio -q`
+- [x] Đăng ký minio marker và fixture endpoint riêng trước chạy; dùng run-specific prefix, chỉ cleanup tài nguyên test sở hữu. Chạy nguyên trạng P3/OLAP/SPC suites hoặc ghi rõ skips môi trường.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T13
 
@@ -479,7 +479,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (4 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** STORAGE_DEMO_MINIO_TEST=1 service Python pytest test_storage_minio_demo.py -m minio: 6 pass, 12.03s. Unique S3 prefixes; normal/replay/resume/quality/structure/500/timeout and maintenance.
 
 ### T15: Benchmark harness có đối chiếu kết quả
 

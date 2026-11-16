@@ -64,3 +64,42 @@ History `maintenance.jsonl` stores decisions, errors, timings and layout metrics
 Unfinished STARTED records read as UNKNOWN and contribute to cooldown. Active file
 bytes and retained physical Parquet bytes differ; S3 physical bytes are unknown
 unless measured independently. Compaction does not reclaim retained history.
+
+## Docker demo (two phases)
+
+```bash
+mkdir -p reports/storage/demo
+# Dependency download uses host network at build time to avoid this host's bridge DNS issue.
+# Services themselves use the isolated Compose network.
+docker compose -f infra/docker-compose.storage.yml config --quiet
+docker compose -f infra/docker-compose.storage.yml build
+docker compose -f infra/docker-compose.storage.yml up -d minio mock
+docker compose -f infra/docker-compose.storage.yml --profile ingest up -d worker
+docker compose -f infra/docker-compose.storage.yml wait worker
+# Confirm exit code zero before enabling maintenance:
+docker compose -f infra/docker-compose.storage.yml ps -a
+MAINTENANCE_ENABLED=true MAINTENANCE_INGESTION_STOPPED=true \
+  docker compose -f infra/docker-compose.storage.yml --profile maintain run --rm scheduler \
+  python -m lakehouse_storage.maintenance_scheduler --once
+# No destructive vacuum; an explicit preview can be run the same way.
+```
+
+Default host ports are 18010 (mock) and 19000 (MinIO), bound to loopback. Existing
+9000/9001 services are unaffected. Worker/scheduler share the same absolute
+`/demo/storage_demo/bronze` mount and phase lock. State, Bronze, mock payloads and
+reports persist separately. The mock receives no MinIO credentials. Build and
+service versions are pinned in the Dockerfile, Compose and constraints. Check the
+shareable variables in `infra/storage.env.example`; actual credentials are local.
+
+Opt-in S3 tests use unique prefixes in the demo bucket and retain them for
+inspection (no automatic cleanup of shared resources):
+
+```bash
+STORAGE_DEMO_MINIO_TEST=1 PYTHONPATH=src /tmp/storage-services-venv/bin/python \
+  -m pytest tests/test_storage_minio_demo.py -m minio -q
+```
+
+Verified 2026-11-17: MinIO/mock healthy, worker exit 0 (4001 rows reported),
+maintenance compaction 4 -> 1 sensor files, image `pip check` clean; all six S3 E2E
+tests passed. The Docker bridge DNS failed on this machine; host networking is
+used **only for build dependency download**, with isolated runtime networking.
