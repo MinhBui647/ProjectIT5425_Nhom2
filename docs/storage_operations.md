@@ -21,12 +21,132 @@ export PYTHONPATH=src
 
 The full constraints include transitive packages. This leaves the shared project
 venv unchanged. All commands below need `PYTHONPATH=src` and this environment's
-Python. For a container-only demo, use the Docker section instead.
+Python. For a container-only demo, use option A below instead.
+
+## Setup mock server: chọn Docker hoặc Python local
+
+Mock server sinh dữ liệu giả S1 (sensor) và S2 (MES), lưu payload của từng run,
+rồi cung cấp qua HTTP. Server không tự đẩy dữ liệu và không ghi Bronze/Silver.
+Worker gọi API để lấy dữ liệu và đưa qua P3. Chạy riêng mock không cần MinIO.
+Các lệnh dưới đây chạy từ thư mục gốc repository, trên Bash.
+
+### A. Chạy bằng Docker Compose
+
+Cần Docker Engine, Docker Compose v2, `curl` và Python 3 trên host để chạy các
+lệnh kiểm tra API bên dưới. Không cần tạo venv nếu chỉ chạy mock bằng Docker.
+
+```bash
+docker compose -f infra/docker-compose.storage.yml build mock
+docker compose -f infra/docker-compose.storage.yml up -d mock
+docker compose -f infra/docker-compose.storage.yml ps mock
+export MOCK_URL=http://127.0.0.1:18010
+curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 "$MOCK_URL/health"
+```
+
+Kết quả health phải là `{"status":"ok"}`. Mở Swagger UI tại
+[http://127.0.0.1:18010/docs](http://127.0.0.1:18010/docs) để thử API.
+Host dùng cổng **18010**; các container trong cùng Compose dùng
+`http://mock:8010`. Payload nằm trên named volume `payloads`, mount vào
+`/demo/storage_demo/mock`; restart container vẫn đọc lại được run cũ.
+
+Xem log hoặc dừng riêng mock, không xóa volume:
+
+```bash
+docker compose -f infra/docker-compose.storage.yml logs --tail=100 mock
+docker compose -f infra/docker-compose.storage.yml stop mock
+```
+
+Chỉ chạy lệnh `stop` khi đã thử API/worker xong. Chạy lại bằng `up -d mock`.
+
+### B. Chạy bằng Python local
+
+Tạo venv theo mục "Local service environment" ở trên. Tại **terminal 1**:
+
+```bash
+source /tmp/storage-services-venv/bin/activate
+export PYTHONPATH=src
+export STORAGE_DEMO_ROOT="$PWD/data/storage_demo/mock_local"
+export MOCK_STORE="$STORAGE_DEMO_ROOT/mock"
+export MOCK_HOST=127.0.0.1
+export MOCK_PORT=8010
+python -m lakehouse_storage.mock_server
+```
+
+Giữ terminal này chạy; Uvicorn phải báo đang nghe tại `http://127.0.0.1:8010`.
+Payload được lưu tại `data/storage_demo/mock_local/mock/<run_id>/`.
+`MOCK_STORE` phải nằm bên trong `STORAGE_DEMO_ROOT`, root có thành phần
+`storage_demo` hoặc `storage_benchmark`. Nhấn **Ctrl+C** để dừng; chạy lại cùng
+root sẽ dùng lại payload đã lưu.
+
+Tại **terminal 2**, vẫn ở thư mục gốc repository:
+
+```bash
+export MOCK_URL=http://127.0.0.1:8010
+curl --fail --silent --show-error "$MOCK_URL/health"
+```
+
+Mở Swagger UI tại [http://127.0.0.1:8010/docs](http://127.0.0.1:8010/docs).
+Nếu đổi `MOCK_PORT`, đổi cả port trong `MOCK_URL` ở terminal gọi API/worker.
+
+### Tạo run và lấy dữ liệu: dùng được cho cả A và B
+
+Giữ `MOCK_URL` tương ứng với cách vừa chọn. Các lệnh sau dùng `curl` và
+`python3`, không cần `jq`. Tạo một run gồm **1 MES row + 40 sensor rows**:
+
+```bash
+RUN_ID=$(curl --fail --silent --show-error -X POST "$MOCK_URL/runs" \
+  -H 'Content-Type: application/json' \
+  -d '{"seed":42,"start_time":"2026-01-15T00:00:00Z","samples_per_batch":20,"batches":2,"scenario":"normal"}' \
+  | python3 -c 'import json,sys; print(json.load(sys.stdin)["run_id"])')
+echo "$RUN_ID"
+curl --fail --silent --show-error "$MOCK_URL/runs/$RUN_ID" | python3 -m json.tool
+curl --fail --silent --show-error "$MOCK_URL/runs/$RUN_ID/batches/0" | python3 -m json.tool
+curl --fail --silent --show-error "$MOCK_URL/runs/$RUN_ID/batches/1" \
+  | python3 -c 'import json,sys; b=json.load(sys.stdin); print(b["table_name"], b["sequence"], len(b["data"]))'
+```
+
+Metadata có `batch_count=3`: sequence **0** là `mes_lims` (1 row), sequence
+**1, 2** là `sensor_telemetry` (20 rows/batch). Lệnh cuối in
+`sensor_telemetry 1 20`. Batch response có `run_id`, `sequence`, `table_name`,
+`payload_sha256`, `data`. GET lại cùng run/sequence trả đúng payload bytes đã lưu;
+POST lại tạo run mới. Sensor timestamps cách nhau 1 giây trong cửa sổ sản xuất
+MES; tốc độ HTTP không phải tốc độ phát sensor theo thời gian thực.
+
+### Nối worker với mock
+
+Nếu worker chạy trên host, activate venv ở terminal worker và giữ `MOCK_URL`
+đúng cổng **18010 (Docker)** hoặc **8010 (local)**. Để ghi Silver lên MinIO,
+khởi động thêm dịch vụ:
+
+```bash
+docker compose -f infra/docker-compose.storage.yml up -d minio
+```
+
+Làm tiếp [walkthrough, mục 2](storage_demo.md#2-normal-ingestion-and-replay) để
+cấu hình namespace và credentials. Lệnh `--create-run` trong walkthrough tự tạo
+run mới (hoặc dùng active run đã lưu); để nạp đúng run vừa tạo qua curl, thay
+lệnh đó bằng `python -m lakehouse_storage.ingestion_worker --run-id "$RUN_ID"`
+trong cùng terminal chứa biến `RUN_ID`. Khi worker chạy trong Compose, URL đã
+được cấu hình là `http://mock:8010`.
+
+| Hiện tượng | Kiểm tra |
+|---|---|
+| Connection refused | Server còn chạy, `MOCK_URL` đúng cổng, health đã trả 200 |
+| Address already in use | Chọn `MOCK_PORT` khác khi chạy local; Docker dùng `STORAGE_DEMO_MOCK_PORT` và cập nhật URL host |
+| HTTP 404 | `RUN_ID` đúng, sequence từ 0 đến `batch_count - 1`, dùng đúng server/store đã tạo run |
+| HTTP 422 khi POST | `samples_per_batch`: 1-50.000; `batches`: 1-200; tổng sensor rows không quá 1.000.000; scenario hợp lệ |
+| Worker không kết nối MinIO | Mock health không kiểm tra MinIO; kiểm tra riêng endpoint, credentials và dịch vụ MinIO |
+
+## Local worker and maintenance
+
+Sau khi mock đã chạy, tại terminal khác có venv và `PYTHONPATH=src`. Ví dụ này
+dùng mock local mặc định ở cổng 8010 và Silver local; nếu dùng mock Docker,
+đổi `MOCK_URL` sang `http://127.0.0.1:18010`.
 
 ```bash
 export STORAGE_DEMO_ROOT="$PWD/data/storage_demo"
-python -m lakehouse_storage.mock_server
-# Another terminal; --create-run stores identity for restart.
+export MOCK_URL=http://127.0.0.1:8010
+# --create-run stores identity for restart.
 python -m lakehouse_storage.ingestion_worker --create-run
 python -m lakehouse_storage.ingestion_worker --run-id RUN_ID --replay-sequence 1
 # Only after the worker has exited:

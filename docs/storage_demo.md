@@ -6,9 +6,25 @@ results are linked in section 6.
 
 ## 1. Start the isolated stack
 
-Follow the environment setup and Docker commands in
-[storage_operations.md](storage_operations.md). MinIO is on 19000,
-mock API on 18010. No shared tables are used.
+Chạy từ thư mục gốc repository. Cách dùng Docker cho mock + MinIO:
+
+```bash
+docker compose -f infra/docker-compose.storage.yml build mock
+docker compose -f infra/docker-compose.storage.yml up -d minio mock
+export MOCK_URL=http://127.0.0.1:18010
+curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 "$MOCK_URL/health"
+```
+
+Health phải trả `{"status":"ok"}`. Swagger UI:
+[http://127.0.0.1:18010/docs](http://127.0.0.1:18010/docs). MinIO ở cổng 19000.
+Để chạy worker trên host ở mục 2, tạo/activate service venv theo
+[storage_operations.md](storage_operations.md#local-service-environment).
+
+Nếu chạy mock bằng Python local, dùng hướng dẫn
+[setup mock server](storage_operations.md#b-chạy-bằng-python-local), giữ terminal
+server mở và đặt `MOCK_URL=http://127.0.0.1:8010` ở terminal worker. Hướng dẫn đó
+cũng có lệnh curl tạo run, lấy MES/sensor và các lỗi thường gặp. Mock chỉ cung cấp
+HTTP; worker ở mục 2 mới thực hiện ghi Bronze/P3/Silver. No shared tables are used.
 
 ## 2. Normal ingestion and replay
 
@@ -22,7 +38,7 @@ export STORAGE_DEMO_SILVER_ALLOW_ROOT=s3://smart-dairy-storage-demo/storage_demo
 export MINIO_ENDPOINT=127.0.0.1:19000
 export MINIO_ACCESS_KEY=storagedemo
 export MINIO_SECRET_KEY=storage-demo-local-only
-export MOCK_URL=http://127.0.0.1:18010
+export MOCK_URL="${MOCK_URL:-http://127.0.0.1:18010}"
 python -m lakehouse_storage.ingestion_worker --create-run
 ```
 
