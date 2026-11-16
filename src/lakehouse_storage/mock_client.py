@@ -2,6 +2,7 @@
 import hashlib
 import json
 import re
+import time
 
 import requests
 
@@ -33,13 +34,29 @@ def decode_batch(content, run_id, sequence):
 
 
 class MockClient:
-    def __init__(self, base_url, timeout=15):
+    def __init__(self, base_url, timeout=15, max_attempts=3, backoff=0.2, sleep=time.sleep):
         self.base_url = base_url.rstrip('/')
+        if not 1 <= max_attempts <= 10 or not 0 <= backoff <= 10 or not 0 < timeout <= 120:
+            raise ValueError("invalid transport retry bounds")
+        self.max_attempts, self.backoff, self.sleep = max_attempts, backoff, sleep
         self.timeout = timeout
         self.attempts = 0
 
     def get(self, route):
-        self.attempts += 1
+        for attempt in range(self.max_attempts):
+            self.attempts += 1
+            try:
+                return self._get_once(route)
+            except requests.HTTPError as exc:
+                retryable = exc.response is not None and (exc.response.status_code == 429 or 500 <= exc.response.status_code < 600)
+                if not retryable or attempt + 1 == self.max_attempts:
+                    raise
+            except (requests.Timeout, requests.ConnectionError):
+                if attempt + 1 == self.max_attempts:
+                    raise
+            self.sleep(self.backoff * 2**attempt)
+
+    def _get_once(self, route):
         with requests.get(self.base_url + route, timeout=self.timeout, stream=True, allow_redirects=False) as response:
             response.raise_for_status()
             if response.status_code != 200:

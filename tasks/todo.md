@@ -20,10 +20,10 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 - [x] T04: Mock run và kho payload tái lập
 - [x] T05: Mock HTTP API có entry point
 - [x] T06: Mock scenarios và replay
-- [ ] T07: Client và checkpoint Bronze tối thiểu
-- [ ] T08: Adapter gọi P3 hiện có
-- [ ] T09: Worker loop, retry và resume có giới hạn
-- [ ] T10: Maintenance policy và runner one-shot
+- [x] T07: Client và checkpoint Bronze tối thiểu
+- [x] T08: Adapter gọi P3 hiện có
+- [x] T09: Worker loop, retry và resume có giới hạn
+- [x] T10: Maintenance policy và runner one-shot
 - [ ] T11: Scheduler cùng process với runner
 - [ ] T12: Lịch sử maintenance và kiểm chứng logical rows
 - [ ] T13: Docker Compose cho demo hai pha
@@ -234,15 +234,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Dữ liệu hợp lệ giữ raw dtype/extra fields; không sửa nghiệp vụ hoặc thay writer; payload/checksum sai bị chặn trước P3.
-- [ ] Checkpoint atomic lưu identity/run/table/sequence/path/hash; retry known artifact dùng cùng file; chỉ worker giữ single-instance guard được chạy.
-- [ ] State PUBLISHING dở hoặc checkpoint hỏng chuyển NEEDS_REVIEW, không tự tạo file mới/xóa orphan/nhảy sequence.
+- [x] Dữ liệu hợp lệ giữ raw dtype/extra fields; không sửa nghiệp vụ hoặc thay writer; payload/checksum sai bị chặn trước P3.
+- [x] Checkpoint atomic lưu identity/run/table/sequence/path/hash; retry known artifact dùng cùng file; chỉ worker giữ single-instance guard được chạy.
+- [x] State PUBLISHING dở hoặc checkpoint hỏng chuyển NEEDS_REVIEW, không tự tạo file mới/xóa orphan/nhảy sequence.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_worker_state.py tests/test_ingestion_worker.py tests/test_bronze_writer.py -q`
-- [ ] Kill one-shot worker sau Bronze write trước checkpoint; restart phải dừng NEEDS_REVIEW. Thử instance worker thứ hai trên cùng state root bị từ chối.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_worker_state.py tests/test_ingestion_worker.py tests/test_bronze_writer.py -q`
+- [x] Kill one-shot worker sau Bronze write trước checkpoint; restart phải dừng NEEDS_REVIEW. Thử instance worker thứ hai trên cùng state root bị từ chối.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T06
 
@@ -256,7 +256,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (5 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** 24 pass checkpoint/publication/writer; T09 additionally kills a real worker between Bronze write and checkpoint, verifies NEEDS_REVIEW and no extra artifacts.
 
 ### T08: Adapter gọi P3 hiện có
 
@@ -264,15 +264,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Normal đi qua P3 ghi đủ quality/lineage; quality FAIL không ghi; không sửa mã P3, append_to_delta hoặc ingest_bronze_file.
-- [ ] Adapter kiểm tra status/result lỗi kể cả khi P3 không raise; DONE/REJECTED/FAILED phản ánh kết quả thực, không tự gán PASS.
-- [ ] Replay cùng Bronze trong một writer tuần tự dùng duplicate gate của P3; schema/partition đầu ra giữ nguyên.
+- [x] Normal đi qua P3 ghi đủ quality/lineage; quality FAIL không ghi; không sửa mã P3, append_to_delta hoặc ingest_bronze_file.
+- [x] Adapter kiểm tra status/result lỗi kể cả khi P3 không raise; DONE/REJECTED/FAILED phản ánh kết quả thực, không tự gán PASS.
+- [x] Replay cùng Bronze trong một writer tuần tự dùng duplicate gate của P3; schema/partition đầu ra giữ nguyên.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_governance_adapter.py tests/test_worker_pipeline.py tests/test_data_governance_local_e2e.py tests/test_data_governance_silver_writer.py tests/test_olap_build_marts.py -q`
-- [ ] HTTP -> Bronze tmp_path -> P3 -> local Delta với normal/reject/replay. Giữ P3 thresholds; adapter lazy import tránh vòng import.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_governance_adapter.py tests/test_worker_pipeline.py tests/test_data_governance_local_e2e.py tests/test_data_governance_silver_writer.py tests/test_olap_build_marts.py -q`
+- [x] HTTP -> Bronze tmp_path -> P3 -> local Delta với normal/reject/replay. Giữ P3 thresholds; adapter lazy import tránh vòng import.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T07
 
@@ -285,7 +285,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (4 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** 27 pass adapter/pipeline + unchanged P3/OLAP tests. Normal/reject/replay use real P3 and local Delta; no downstream edits.
 
 ### T09: Worker loop, retry và resume có giới hạn
 
@@ -293,15 +293,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Timeout/network/429/5xx có max attempts/backoff; schema/quality lỗi không retry vô hạn; stop/skip policy được ghi rõ.
-- [ ] Resume BRONZE_READY/PROCESSING dùng cùng file; DONE không nhân rows; kết quả trước crash không rõ được ghi unknown, không suy ra counters.
-- [ ] SIGTERM kết thúc hoặc giữ checkpoint; giới hạn in-flight=1, cấu hình env; summary có rows_written P3 báo, stage durations và trạng thái.
+- [x] Timeout/network/429/5xx có max attempts/backoff; schema/quality lỗi không retry vô hạn; stop/skip policy được ghi rõ.
+- [x] Resume BRONZE_READY/PROCESSING dùng cùng file; DONE không nhân rows; kết quả trước crash không rõ được ghi unknown, không suy ra counters.
+- [x] SIGTERM kết thúc hoặc giữ checkpoint; giới hạn in-flight=1, cấu hình env; summary có rows_written P3 báo, stage durations và trạng thái.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_worker_retry.py tests/test_worker_pipeline.py tests/test_ingestion_worker.py -q`
-- [ ] Fake clock cho retry tests, subprocess thật cho shutdown. Dừng sau P3 đã ghi và trước worker DONE rồi retry cùng Bronze: không thêm rows trong điều kiện một writer.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_worker_retry.py tests/test_worker_pipeline.py tests/test_ingestion_worker.py -q`
+- [x] Fake clock cho retry tests, subprocess thật cho shutdown. Dừng sau P3 đã ghi và trước worker DONE rồi retry cùng Bronze: không thêm rows trong điều kiện một writer.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T08
 
@@ -315,7 +315,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (5 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** RED 5 failures/2 pass; GREEN 14 pass including finite 429/5xx retry, no retry on 404, real process kill after commit and graceful SIGTERM.
 
 ### Checkpoint CP-C: sau T07–T09
 
@@ -332,15 +332,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Policy validate namespace, file thresholds, target size, columns; runner trả RUN/SKIP/FAIL và lý do, không quét cả bảng chỉ để quyết định.
-- [ ] Compaction truyền đúng target size xuống Delta; sửa cục bộ maintenance.py nếu cần, giữ chữ ký; Z-order chỉ dùng cột hợp lệ không phải partition.
-- [ ] Vacuum chỉ dry-run với retention >=168h và enforce bật; mọi action cần maintenance-enabled/window, không thay policy global của API cũ.
+- [x] Policy validate namespace, file thresholds, target size, columns; runner trả RUN/SKIP/FAIL và lý do, không quét cả bảng chỉ để quyết định.
+- [x] Compaction truyền đúng target size xuống Delta; sửa cục bộ maintenance.py nếu cần, giữ chữ ký; Z-order chỉ dùng cột hợp lệ không phải partition.
+- [x] Vacuum chỉ dry-run với retention >=168h và enforce bật; mọi action cần maintenance-enabled/window, không thay policy global của API cũ.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_maintenance_policy.py tests/test_maintenance_runner.py tests/test_maintenance.py -q`
-- [ ] Local Delta nhiều file nhỏ: chạy runner rồi so row count/query results. Kiểm chứng target size call bằng API cài trong T01; không đặt exact file-size assertion dễ flaky.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_maintenance_policy.py tests/test_maintenance_runner.py tests/test_maintenance.py -q`
+- [x] Local Delta nhiều file nhỏ: chạy runner rồi so row count/query results. Kiểm chứng target size call bằng API cài trong T01; không đặt exact file-size assertion dễ flaky.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T01
 
@@ -354,7 +354,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (5 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** 23 pass policy/runner/existing maintenance; real Delta logical rows unchanged; target_size forwarding, Z-order validation, preview-only vacuum.
 
 ### T11: Scheduler cùng process với runner
 
