@@ -147,3 +147,20 @@ BRONZE_PATH=data/01_bronze_vault
 > [!TIP]  
 > Mọi hàm public, cấu trúc tham số, và các ngoại lệ (Exception) đều được tài liệu hóa chi tiết tại:  
 > 👉 **[API_REFERENCE.md](file:///home/kh0ngm1nh/Documents/HUST/20261/Data%20management%20and%20visualization%20-%20IT5425/Project/ProjectIT5425_Nhom2/src/lakehouse_storage/API_REFERENCE.md)**
+
+## Isolated storage services and benchmark (2026-11-17)
+
+The optional demo adds persisted S1/S2 mock HTTP, one checkpointed worker through
+P3, a UTC maintenance scheduler, and measured layout benchmarks with four charts.
+Start with [the walkthrough](../../docs/storage_demo.md),
+[operations](../../docs/storage_operations.md), [baseline](../../docs/storage_baseline.md)
+and [measured results](../../docs/storage_results.md). Scope/status:
+[tasks/plan.md](../../tasks/plan.md), [tasks/todo.md](../../tasks/todo.md).
+
+Install service dependencies with the separate pinned constraints; core imports,
+writer signatures, Silver schemas/partitions and shared URIs remain compatible.
+The worker is sequential and local. It reuses known Bronze files; uncertainty in
+PUBLISHING stops at NEEDS_REVIEW. PROCESSING retries use P3's existing duplicate
+gate and do not infer pre-crash row counts. There is no distributed exactly-once
+claim. Stop ingestion before enabling maintenance. Vacuum is preview-only with
+>=168-hour retention enforcement. No metadata contract was changed.

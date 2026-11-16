@@ -8,9 +8,9 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 - Mã mới trong lakehouse_storage; giữ nguyên mã/tests downstream, Silver/Bronze writer và schema.
 - Mỗi task có 3 acceptance criteria, dependency rõ và tối đa 5 file chính. S = 1–2 file, M = 3–5 file; tách task nếu triển khai vượt một phiên tập trung.
-- Các file/test/CLI mới là mục tiêu sẽ tạo, chưa phải khả năng hiện có. Lệnh pytest dùng .venv hiện tại; môi trường dịch vụ/container có thể dùng interpreter tương ứng.
+- Các file/test/CLI đã được triển khai theo evidence từng task. Dùng service venv/constraints trong docs/storage_baseline.md; không sửa .venv chung.
 - Chỉ đánh dấu hoàn thành sau evidence. Ghi pass/fail/skip và lý do; không sửa expected tests downstream để che regression.
-- Skill yêu cầu review kế hoạch trước implementation. Người dùng đã đồng ý phạm vi; lượt này chỉ cập nhật tài liệu kế hoạch.
+- Phạm vi đã được người dùng thống nhất; triển khai theo các slice đã kiểm thử và commit riêng. Review độc lập và regression cuối ghi trong docs/storage_validation.md.
 
 ## Tiến độ tổng
 
@@ -29,9 +29,9 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 - [x] T13: Docker Compose cho demo hai pha
 - [x] T14: MinIO E2E cho demo và failure cases
 - [x] T15: Benchmark harness có đối chiếu kết quả
-- [ ] T16: Chạy thực nghiệm và ghi kết quả thật
-- [ ] T17: Biểu đồ và diễn giải thực nghiệm
-- [ ] T18: Demo, tài liệu và nghiệm thu tương thích
+- [x] T16: Chạy thực nghiệm và ghi kết quả thật
+- [x] T17: Biểu đồ và diễn giải thực nghiệm
+- [x] T18: Demo, tài liệu và nghiệm thu tương thích
 
 ## Checklist chi tiết
 
@@ -124,10 +124,10 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 ### Checkpoint CP-A: sau T01–T03
 
-- [ ] Hai lỗi truy vết được tái hiện và sửa; API/core import/schema giữ tương thích; môi trường dịch vụ dựng lại được.
-- [ ] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
-- [ ] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
-- [ ] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
+- [x] Hai lỗi truy vết được tái hiện và sửa; API/core import/schema giữ tương thích; môi trường dịch vụ dựng lại được.
+- [x] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
+- [x] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
+- [x] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
 
 ## Giai đoạn B: Mock server
 
@@ -221,10 +221,10 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 ### Checkpoint CP-B: sau T04–T06
 
-- [ ] Mock HTTP API có normal/error scenarios và replay byte-identical sau restart; không ghi Silver.
-- [ ] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
-- [ ] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
-- [ ] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
+- [x] Mock HTTP API có normal/error scenarios và replay byte-identical sau restart; không ghi Silver.
+- [x] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
+- [x] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
+- [x] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
 
 ## Giai đoạn C: Ingestion worker tối thiểu
 
@@ -319,10 +319,10 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 ### Checkpoint CP-C: sau T07–T09
 
-- [ ] Một worker đi qua P3 nguyên trạng; known Bronze được tái dùng; state dở ngoài bảo đảm dừng NEEDS_REVIEW.
-- [ ] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
-- [ ] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
-- [ ] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
+- [x] Một worker đi qua P3 nguyên trạng; known Bronze được tái dùng; state dở ngoài bảo đảm dừng NEEDS_REVIEW.
+- [x] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
+- [x] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
+- [x] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
 
 ## Giai đoạn D: Maintenance scheduler
 
@@ -416,10 +416,10 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 ### Checkpoint CP-D: sau T10–T12
 
-- [ ] Scheduler gọi runner cùng process; job không chồng; history đúng, logical rows giữ nguyên, vacuum chỉ preview.
-- [ ] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
-- [ ] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
-- [ ] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
+- [x] Scheduler gọi runner cùng process; job không chồng; history đúng, logical rows giữ nguyên, vacuum chỉ preview.
+- [x] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
+- [x] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
+- [x] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
 
 ## Giai đoạn E: Docker, E2E và benchmark harness
 
@@ -512,10 +512,10 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 ### Checkpoint CP-E: sau T13–T15
 
-- [ ] Demo MinIO hai pha chạy được; E2E đúng; benchmark harness kiểm tra kết quả trước đo thời gian.
-- [ ] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
-- [ ] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
-- [ ] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
+- [x] Demo MinIO hai pha chạy được; E2E đúng; benchmark harness kiểm tra kết quả trước đo thời gian.
+- [x] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
+- [x] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
+- [x] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
 
 ## Giai đoạn F: Thực nghiệm và bàn giao
 
@@ -525,14 +525,14 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Chạy scale 100k/1M nếu đủ tài nguyên; mọi cấu hình thực chạy/skip có lý do và cấu hình máy, seed, versions.
-- [ ] Có baseline/compacted và Z-order tùy chọn cho query phù hợp, ít nhất 5 timed repetitions; correctness checks pass trước khi báo speedup.
-- [ ] Lưu raw metrics/config/operation logs dưới reports/storage/<run_id>; không vacuum hoặc ghi lên bảng nhóm; physical-size chưa đo thì ghi unknown.
+- [x] Chạy scale 100k/1M nếu đủ tài nguyên; mọi cấu hình thực chạy/skip có lý do và cấu hình máy, seed, versions.
+- [x] Có baseline/compacted và Z-order tùy chọn cho query phù hợp, ít nhất 5 timed repetitions; correctness checks pass trước khi báo speedup.
+- [x] Lưu raw metrics/config/operation logs dưới reports/storage/<run_id>; không vacuum hoặc ghi lên bảng nhóm; physical-size chưa đo thì ghi unknown.
 
 **Kiểm chứng:**
 
-- [ ] Chạy python -m lakehouse_storage.benchmark theo CLI T15 và ghi nguyên command vào report. Kiểm tra metrics có đủ raw samples và không trộn local/MinIO hay cache regimes.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] Chạy python -m lakehouse_storage.benchmark theo CLI T15 và ghi nguyên command vào report. Kiểm tra metrics có đủ raw samples và không trộn local/MinIO hay cache regimes.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T15
 
@@ -543,7 +543,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** S (2 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** 100k rows x three batch sizes (1k/10k/50k), seed 42, all 100k accepted/0 rejected, equivalent fingerprints/query results. Final run reports/storage/measured_100k_20261117, revision a6638ff; 5 timed repetitions per query/layout. 1M and Z-order performance not claimed.
 
 ### T17: Biểu đồ và diễn giải thực nghiệm
 
@@ -551,15 +551,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Xuất >=4 hình PNG/SVG: file counts, file-size distribution, latency và throughput/batch size; nhãn/đơn vị/dispersion rõ.
-- [ ] Mỗi hình truy về run/config/raw metrics, script tái tạo được; không bịa kết quả khi Z-order/compaction không nhanh hơn.
-- [ ] Báo cáo phân biệt active/retained bytes, end-to-end/storage time và giới hạn synthetic workload; plotting deps không vào core imports.
+- [x] Xuất >=4 hình PNG/SVG: file counts, file-size distribution, latency và throughput/batch size; nhãn/đơn vị/dispersion rõ.
+- [x] Mỗi hình truy về run/config/raw metrics, script tái tạo được; không bịa kết quả khi Z-order/compaction không nhanh hơn.
+- [x] Báo cáo phân biệt active/retained bytes, end-to-end/storage time và giới hạn synthetic workload; plotting deps không vào core imports.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_benchmark_report.py tests/test_storage_compatibility.py -q`
-- [ ] Chạy report generator trên dữ liệu T16, mở từng ảnh để kiểm tra nhãn/chồng chữ/trục. Report tests chỉ kiểm tra metric mapping/render smoke, không snapshot pixel toàn hình.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_benchmark_report.py tests/test_storage_compatibility.py -q`
+- [x] Chạy report generator trên dữ liệu T16, mở từng ảnh để kiểm tra nhãn/chồng chữ/trục. Report tests chỉ kiểm tra metric mapping/render smoke, không snapshot pixel toàn hình.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T16
 
@@ -571,7 +571,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (3 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** Report mapping/render + compatibility: 3 pass; four final PNG and SVG charts generated from raw metrics and opened for visual QA. docs/storage_results.md records dispersion, slower cases and limitations.
 
 ### T18: Demo, tài liệu và nghiệm thu tương thích
 
@@ -579,15 +579,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Demo có mock, ingest qua P3, replay/reject, scheduler sau ingest, trace và benchmark figures; lệnh chạy/roots/profile rõ ràng.
-- [ ] README/API_REFERENCE ghi scope single worker, NEEDS_REVIEW window, metadata giữ nguyên và preview-only vacuum; docs cũ được đánh dấu không phải trạng thái gói mới.
-- [ ] Full suite và downstream nguyên trạng có kết quả pass/fail/skip; review diff không sửa mã downstream, silver_manager hoặc bronze_writer; Docker/import checks đạt.
+- [x] Demo có mock, ingest qua P3, replay/reject, scheduler sau ingest, trace và benchmark figures; lệnh chạy/roots/profile rõ ràng.
+- [x] README/API_REFERENCE ghi scope single worker, NEEDS_REVIEW window, metadata giữ nguyên và preview-only vacuum; docs cũ được đánh dấu không phải trạng thái gói mới.
+- [x] Full suite và downstream nguyên trạng có kết quả pass/fail/skip; review diff không sửa mã downstream, silver_manager hoặc bronze_writer; Docker/import checks đạt.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/ -q`
-- [ ] Chạy lại demo từ namespace mới, pip check, compose health, git diff --check và kiểm tra scope. Báo lỗi baseline riêng; không đánh dấu hoàn tất khi có regression do gói mới.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/ -q`
+- [x] Chạy lại demo từ namespace mới, pip check, compose health, git diff --check và kiểm tra scope. Báo lỗi baseline riêng; không đánh dấu hoàn tất khi có regression do gói mới.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T17
 
@@ -601,23 +601,23 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (5 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** Full suite 394 pass/1 opt-in skip, 63.24s; skipped chDB file then run unchanged on demo bucket: 2 pass. Final image fresh worker 61 rows, maintenance 3 -> 1 files, replay/trace/preview checked; docs/storage_validation.md and storage_demo.md provide commands and scope.
 
 ### Checkpoint CP-F: sau T16–T18
 
-- [ ] Số liệu thật và 4 biểu đồ tái tạo được; demo có docs; downstream không phải sửa và regression tests đạt.
-- [ ] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
-- [ ] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
-- [ ] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
+- [x] Số liệu thật và 4 biểu đồ tái tạo được; demo có docs; downstream không phải sửa và regression tests đạt.
+- [x] Focused tests và regression liên quan đạt; build/import hoặc smoke tương ứng có evidence.
+- [x] Review phạm vi diff: không thay downstream, schema hoặc write policy; mọi giới hạn runtime được ghi rõ.
+- [x] Cập nhật trạng thái/evidence trước khi bắt đầu phần phụ thuộc.
 
 ## Definition of Done chung
 
-- [ ] Tất cả acceptance criteria đạt và evidence tái tạo được.
-- [ ] Đã chạy tests downstream nguyên trạng, phân biệt lỗi baseline với regression.
-- [ ] Demo dùng namespace riêng, worker dừng trước maintenance, vacuum preview không xóa.
-- [ ] Worker không hứa exactly-once đa writer; crash window chưa hỗ trợ chuyển NEEDS_REVIEW.
-- [ ] Báo cáo có số liệu thật và phân biệt throughput end-to-end với storage-only.
-- [ ] Không commit dữ liệu lớn/secrets; không sửa hoặc xóa thay đổi ngoài phạm vi.
+- [x] Tất cả acceptance criteria đạt và evidence tái tạo được.
+- [x] Đã chạy tests downstream nguyên trạng, phân biệt lỗi baseline với regression.
+- [x] Demo dùng namespace riêng, worker dừng trước maintenance, vacuum preview không xóa.
+- [x] Worker không hứa exactly-once đa writer; crash window chưa hỗ trợ chuyển NEEDS_REVIEW.
+- [x] Báo cáo có số liệu thật và phân biệt throughput end-to-end với storage-only.
+- [x] Không commit dữ liệu lớn/secrets; không sửa hoặc xóa thay đổi ngoài phạm vi.
 
 ## Backlog để sau, không chặn gói này
 

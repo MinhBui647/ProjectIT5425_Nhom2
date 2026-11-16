@@ -194,3 +194,33 @@ all sources to pass. Missing paths/files/hashes, unreadable files, checksum
 mismatches and conflicting expected hashes are reported without discarding other
 sources. Each path is hashed at most once. A damaged second source can therefore
 change overall integrity from true to false without changing any Silver rows.
+
+### Optional demo service interfaces
+
+These modules are not imported by the core package. Install the service
+requirements/constraints documented in `docs/storage_baseline.md`.
+
+| Interface | Inputs / outputs |
+|---|---|
+| `mock_server.app.create_app(store_root)` | FastAPI application; `/docs` documents run controls |
+| `POST /runs` | Bounded seed/start_time/samples_per_batch/batches/scenario; 201 run_id/batch_count/request; unsafe to retry |
+| `GET /health` | 200 status=ok when the payload store exists |
+| `GET /runs/{id}` | Persisted run metadata; unknown id -> 404 |
+| `GET /runs/{id}/batches/{sequence}` | Stored JSON bytes: run_id, sequence, table_name, payload_sha256, data; unknown ->404 |
+| `IngestionWorker(config, client).process(run_id, sequence, replay=False)` | Checkpoint dict with status, artifact evidence, P3 result, reported rows and stage durations |
+| `IngestionWorker.run(run_id, limit=None, skip_rejected=False, stop=None)` | Ordered records for pending sequences; default stops at a rejection/failure |
+| `MaintenanceRunner(history_path).run(policy, action='compact', enabled=False, ingestion_stopped=False, now=None)` | RUN/SKIP/FAIL record with reason, metrics, timings and error |
+| `build_scheduler(policies, runner, ..., action='compact')` | Same-process UTC scheduler; actions compact/zorder/vacuum_preview |
+| `benchmark.run_benchmark(...)` | Fresh isolated HTTP/P3/layout experiment and JSON/CSV operation evidence |
+| `benchmark_report.render_report(metrics_path)` | Four charts in PNG/SVG plus Markdown summary |
+
+Core API signatures and schemas are frozen by `test_storage_compatibility.py`.
+Workers use POSIX filesystem locking in these service entry points, not a lock on
+external P3 writers. Known artifact checksums are checked before replay. Structural
+REJECTED outcomes do not trigger another fetch. Retry is finite for network,
+timeout, 429 and 5xx; quality failures stop or skip explicitly. PUBLISHING ambiguity
+is NEEDS_REVIEW, and interrupted PROCESSING records previous outcome as unknown.
+All mutable demo targets require allowlisted descendants and local output-tree
+checks. Maintenance flags/window are explicit; vacuum always previews, with a
+168-hour minimum and retention enforcement. Existing shared write policy and
+`ingestion_date` semantics remain unchanged.

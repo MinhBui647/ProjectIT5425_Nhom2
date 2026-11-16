@@ -1,7 +1,7 @@
 # Kế hoạch Lakehouse Storage: Mock, Worker, Scheduler & Benchmark
 
 Cập nhật: 2026-11-17. Branch: `feature/lakehouse-reliability-automation`.
-Trạng thái: đã thống nhất phạm vi với người dùng; tài liệu này là kế hoạch, chưa triển khai.
+Trạng thái: đã triển khai gói demo tối thiểu; evidence nghiệm thu trong [todo.md](todo.md), [storage_validation.md](../docs/storage_validation.md) và [storage_results.md](../docs/storage_results.md).
 Task list và tiến độ: [todo.md](todo.md).
 
 ## 1. Phạm vi đã chốt

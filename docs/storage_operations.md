@@ -19,7 +19,8 @@ python -m lakehouse_storage.ingestion_worker --run-id RUN_ID --replay-sequence 1
 # Only after the worker has exited:
 MAINTENANCE_ENABLED=true MAINTENANCE_INGESTION_STOPPED=true MAINTENANCE_FILE_THRESHOLD=2 \
   python -m lakehouse_storage.maintenance_scheduler --once
-python -m lakehouse_storage.maintenance_scheduler --once --action vacuum_preview
+MAINTENANCE_ENABLED=true MAINTENANCE_INGESTION_STOPPED=true \
+  python -m lakehouse_storage.maintenance_scheduler --once --action vacuum_preview
 ```
 
 The default scheduler records SKIP until both maintenance flags are true. Hours
