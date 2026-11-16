@@ -47,3 +47,11 @@ def test_malformed_checkpoint_fields_need_review(tmp_path, changes):
     record = {'run_id':'a'*32,'sequence':1,'table_name':'sensor_telemetry','status':'FETCHING','attempts':0, **changes}
     state.save(record)
     with pytest.raises(NeedsReview): state.load('a'*32,1)
+
+
+def test_done_without_p3_evidence_is_corrupt(tmp_path):
+    state = StateStore(tmp_path)
+    record = {'run_id':'a'*32,'sequence':1,'table_name':'sensor_telemetry','status':'DONE','attempts':1,
+              'durations':{},'bronze_path':'/some/path.parquet','bronze_sha256':'b'*64,'payload_sha256':'c'*64}
+    state.save(record)
+    with pytest.raises(NeedsReview): state.load('a'*32,1)

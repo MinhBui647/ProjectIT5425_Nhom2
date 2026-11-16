@@ -80,6 +80,15 @@ class StateStore:
                     raise ValueError('checkpoint artifact evidence missing')
                 if not isinstance(record['bronze_path'], str) or any(not isinstance(record[k], str) or not re.fullmatch('[a-f0-9]{64}', record[k]) for k in ('bronze_sha256', 'payload_sha256')):
                     raise ValueError('invalid artifact digest/path')
+            if record['status'] == 'DONE':
+                from lakehouse_storage.governance_adapter import classify_result
+                result = record.get('p3_result')
+                if not isinstance(result, dict) or classify_result(result) != 'DONE':
+                    raise ValueError('DONE requires successful P3 evidence')
+                if (result.get('table_name'), result.get('bronze_file')) != (table, record['bronze_path']):
+                    raise ValueError('DONE P3 identity mismatch')
+                if type(record.get('rows_written')) is not int or record['rows_written'] != result['rows_written']:
+                    raise ValueError('DONE rows_written evidence mismatch')
             return record
         except (ValueError, KeyError, TypeError) as exc:
             atomic_json(path.with_suffix('.review.json'), {'status': 'NEEDS_REVIEW', 'reason': str(exc)})
