@@ -153,9 +153,9 @@ BRONZE_PATH=data/01_bronze_vault
 The optional demo adds persisted S1/S2 mock HTTP, one checkpointed worker through
 P3, a UTC maintenance scheduler, and measured layout benchmarks with four charts.
 Start with [the walkthrough](../../docs/storage_demo.md),
-[operations](../../docs/storage_operations.md), [baseline](../../docs/storage_baseline.md)
-and [measured results](../../docs/storage_results.md). Scope/status:
-[tasks/plan.md](../../tasks/plan.md), [tasks/todo.md](../../tasks/todo.md).
+[operations](../../docs/storage_operations.md),
+[benchmark commands](../../docs/storage_benchmark.md)
+and [measured results](../../docs/storage_results.md).
 
 Install service dependencies with the separate pinned constraints; core imports,
 writer signatures, Silver schemas/partitions and shared URIs remain compatible.

@@ -7,8 +7,21 @@ allow-root; local roots must contain `storage_demo` or `storage_benchmark`.
 
 ## Local service environment
 
-Use the clean environment and constraints in [storage_baseline.md](storage_baseline.md).
-All commands below need `PYTHONPATH=src` and that environment's Python.
+Run these commands from the repository root to create a separate service
+environment with the pinned dependencies, then activate it:
+
+```bash
+python3 -m venv /tmp/storage-services-venv
+/tmp/storage-services-venv/bin/python -m pip install \
+  -r requirements.txt -r infra/requirements-storage.txt -c infra/constraints-storage.txt
+/tmp/storage-services-venv/bin/python -m pip check
+source /tmp/storage-services-venv/bin/activate
+export PYTHONPATH=src
+```
+
+The full constraints include transitive packages. This leaves the shared project
+venv unchanged. All commands below need `PYTHONPATH=src` and this environment's
+Python. For a container-only demo, use the Docker section instead.
 
 ```bash
 export STORAGE_DEMO_ROOT="$PWD/data/storage_demo"

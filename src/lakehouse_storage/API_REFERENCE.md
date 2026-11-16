@@ -198,7 +198,8 @@ change overall integrity from true to false without changing any Silver rows.
 ### Optional demo service interfaces
 
 These modules are not imported by the core package. Install the service
-requirements/constraints documented in `docs/storage_baseline.md`.
+requirements/constraints documented in
+[the demo setup guide](../../docs/storage_operations.md).
 
 | Interface | Inputs / outputs |
 |---|---|

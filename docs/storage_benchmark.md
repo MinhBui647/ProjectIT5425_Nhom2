@@ -1,7 +1,7 @@
 # Reproducing storage benchmarks
 
-Use the isolated service environment from `storage_baseline.md`. Start Docker
-MinIO/mock from `storage_operations.md`. Stop demo ingestion before maintenance.
+Use the isolated service environment and start Docker MinIO/mock as described in
+[storage_operations.md](storage_operations.md). Stop demo ingestion before maintenance.
 The harness owns a separate namespace for each invocation and refuses existing
 work/report directories. It never vacuums and never uses shared factory tables.
 

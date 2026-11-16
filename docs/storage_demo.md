@@ -1,12 +1,13 @@
 # Storage demo walkthrough
 
-Implementation status and acceptance evidence live in `tasks/todo.md`.
-`tasks/plan.md` is the scope; earlier plans are historical.
+This walkthrough covers the isolated S1/S2 mock, sequential ingestion through P3,
+replay, rejection, maintenance and source tracing. Benchmark commands and measured
+results are linked in section 6.
 
 ## 1. Start the isolated stack
 
-Follow environment setup in [storage_baseline.md](storage_baseline.md) and Docker
-commands in [storage_operations.md](storage_operations.md). MinIO is on 19000,
+Follow the environment setup and Docker commands in
+[storage_operations.md](storage_operations.md). MinIO is on 19000,
 mock API on 18010. No shared tables are used.
 
 ## 2. Normal ingestion and replay
