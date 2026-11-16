@@ -28,7 +28,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 - [x] T12: Lịch sử maintenance và kiểm chứng logical rows
 - [x] T13: Docker Compose cho demo hai pha
 - [x] T14: MinIO E2E cho demo và failure cases
-- [ ] T15: Benchmark harness có đối chiếu kết quả
+- [x] T15: Benchmark harness có đối chiếu kết quả
 - [ ] T16: Chạy thực nghiệm và ghi kết quả thật
 - [ ] T17: Biểu đồ và diễn giải thực nghiệm
 - [ ] T18: Demo, tài liệu và nghiệm thu tương thích
@@ -487,15 +487,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Baseline/optimized cùng logical accepted dataset/schema/partition; query result equality được kiểm tra trước latency comparison.
-- [ ] Có seed, scale, batch sizes, warm-up >=1 và repeats >=5; lưu median/dispersion/raw times/environment và đúng cache policy.
-- [ ] Đo end-to-end throughput có ghi P3 overhead, file count/size, active bytes, compaction duration và query latency; không dùng shared namespace.
+- [x] Baseline/optimized cùng logical accepted dataset/schema/partition; query result equality được kiểm tra trước latency comparison.
+- [x] Có seed, scale, batch sizes, warm-up >=1 và repeats >=5; lưu median/dispersion/raw times/environment và đúng cache policy.
+- [x] Đo end-to-end throughput có ghi P3 overhead, file count/size, active bytes, compaction duration và query latency; không dùng shared namespace.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_storage_benchmark.py -q`
-- [ ] Chạy harness quy mô nhỏ trên MinIO; tests kiểm tra correctness/schema metrics, không assert tốc độ. Không viết lại benchmark so sánh engine của P4.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_storage_benchmark.py -q`
+- [x] Chạy harness quy mô nhỏ trên MinIO; tests kiểm tra correctness/schema metrics, không assert tốc độ. Không viết lại benchmark so sánh engine của P4.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T12, T14
 
@@ -508,7 +508,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (4 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** 6 harness tests pass, 200-row real S3 smoke at reports/storage/smoke_s3_20261117; each layout/workload has 1 warmup + 5 repeats, equality checks and environment/raw CSV/JSON evidence.
 
 ### Checkpoint CP-E: sau T13–T15
 
