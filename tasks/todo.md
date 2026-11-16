@@ -24,8 +24,8 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 - [x] T08: Adapter gọi P3 hiện có
 - [x] T09: Worker loop, retry và resume có giới hạn
 - [x] T10: Maintenance policy và runner one-shot
-- [ ] T11: Scheduler cùng process với runner
-- [ ] T12: Lịch sử maintenance và kiểm chứng logical rows
+- [x] T11: Scheduler cùng process với runner
+- [x] T12: Lịch sử maintenance và kiểm chứng logical rows
 - [ ] T13: Docker Compose cho demo hai pha
 - [ ] T14: MinIO E2E cho demo và failure cases
 - [ ] T15: Benchmark harness có đối chiếu kết quả
@@ -362,15 +362,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Một scheduler gọi runner trực tiếp, không queue/worker container riêng; job ids ổn định, max concurrency=1, coalesce/misfire có giới hạn.
-- [ ] Restart không tạo job trùng hoặc catch-up vô hạn; SIGTERM dừng sạch; scheduler mặc định disabled cho mutation khi chưa cấu hình phase/window.
-- [ ] Không tự coi scheduler lock là lock P3; tài liệu/CLI nói rõ ingestion phải dừng trước maintenance trong demo.
+- [x] Một scheduler gọi runner trực tiếp, không queue/worker container riêng; job ids ổn định, max concurrency=1, coalesce/misfire có giới hạn.
+- [x] Restart không tạo job trùng hoặc catch-up vô hạn; SIGTERM dừng sạch; scheduler mặc định disabled cho mutation khi chưa cấu hình phase/window.
+- [x] Không tự coi scheduler lock là lock P3; tài liệu/CLI nói rõ ingestion phải dừng trước maintenance trong demo.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_scheduler.py tests/test_maintenance_runner.py tests/test_storage_compatibility.py -q`
-- [ ] Clock điều khiển cho test thời gian; smoke process lịch ngắn + shutdown; khởi động scheduler thứ hai trên cùng state root bị từ chối.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_scheduler.py tests/test_maintenance_runner.py tests/test_storage_compatibility.py -q`
+- [x] Clock điều khiển cho test thời gian; smoke process lịch ngắn + shutdown; khởi động scheduler thứ hai trên cùng state root bị từ chối.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T10
 
@@ -383,7 +383,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (4 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** Scheduler/history/invariants/time-travel: 25 pass. Stable UTC jobs, max one executor, bounded misfire/coalesce, second process refused, SIGTERM exits cleanly.
 
 ### T12: Lịch sử maintenance và kiểm chứng logical rows
 
@@ -391,15 +391,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Record có action/decision/error/duration/version/file count/active bytes; restart đọc cooldown, record dở ghi unknown không báo success.
-- [ ] Compaction/Z-order giữ logical query results và time travel bản trước khi chưa vacuum; test scheduler skip khi không ở window.
-- [ ] Preview vacuum không xóa file; metric phân biệt active bytes với physical bytes, không gọi active-byte delta là freed disk.
+- [x] Record có action/decision/error/duration/version/file count/active bytes; restart đọc cooldown, record dở ghi unknown không báo success.
+- [x] Compaction/Z-order giữ logical query results và time travel bản trước khi chưa vacuum; test scheduler skip khi không ở window.
+- [x] Preview vacuum không xóa file; metric phân biệt active bytes với physical bytes, không gọi active-byte delta là freed disk.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_maintenance_history.py tests/test_maintenance_invariants.py tests/test_scheduler.py tests/test_time_travel.py -q`
-- [ ] Chạy một đợt ingest hoàn tất, maintenance, query trước/sau. Ghi rõ thử nghiệm này không chứng minh concurrency với writer bên ngoài.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_maintenance_history.py tests/test_maintenance_invariants.py tests/test_scheduler.py tests/test_time_travel.py -q`
+- [x] Chạy một đợt ingest hoàn tất, maintenance, query trước/sau. Ghi rõ thử nghiệm này không chứng minh concurrency với writer bên ngoài.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T10, T11
 
@@ -412,7 +412,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (4 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** 25 pass including persisted cooldown, UNKNOWN unfinished action, before/after logical equality and pre-maintenance versions, vacuum preserves all files.
 
 ### Checkpoint CP-D: sau T10–T12
 
