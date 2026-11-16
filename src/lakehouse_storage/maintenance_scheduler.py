@@ -10,7 +10,7 @@ from lakehouse_storage.service_config import ServiceConfig
 from lakehouse_storage.worker_state import single_instance
 
 
-def build_scheduler(policies, runner, *, enabled=False, ingestion_stopped=False, interval_seconds=None):
+def build_scheduler(policies, runner, *, enabled=False, ingestion_stopped=False, interval_seconds=None, action='compact'):
     from apscheduler.executors.pool import ThreadPoolExecutor
     from apscheduler.schedulers.background import BackgroundScheduler
     from apscheduler.triggers.cron import CronTrigger
@@ -24,7 +24,7 @@ def build_scheduler(policies, runner, *, enabled=False, ingestion_stopped=False,
         trigger = (IntervalTrigger(seconds=interval_seconds, timezone='UTC') if interval_seconds is not None
                    else CronTrigger.from_crontab(policy.cron_utc, timezone='UTC'))
         scheduler.add_job(runner.run, trigger, args=[policy],
-                          kwargs={'enabled': enabled, 'ingestion_stopped': ingestion_stopped},
+                          kwargs={'enabled': enabled, 'ingestion_stopped': ingestion_stopped, 'action': action},
                           id='maintenance-' + identifier, replace_existing=True,
                           max_instances=1, coalesce=True, misfire_grace_time=30)
     return scheduler
@@ -64,7 +64,7 @@ def main():
             return int(any(r['decision'] == 'FAIL' for r in results))
         interval = os.getenv('MAINTENANCE_INTERVAL_SECONDS')
         scheduler = build_scheduler(policies, runner, enabled=enabled, ingestion_stopped=stopped,
-                                    interval_seconds=float(interval) if interval else None)
+                                    interval_seconds=float(interval) if interval else None, action=args.action)
         scheduler.start()
         print('scheduler ready', flush=True)
         try:

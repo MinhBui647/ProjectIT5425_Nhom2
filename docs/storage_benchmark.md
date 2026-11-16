@@ -42,7 +42,8 @@ All query runs use at least one warmup and five timed repetitions. The OS/object
 cache is uncontrolled; call these warm workloads, not cold-cache tests. Layout
 order is baseline then compacted, workload order appears in `query_text`.
 
-The workload is synthetic: one production line and one ingestion-date partition.
+The workload is synthetic: one production line. The 100k-row stream spans two ingestion-date partitions
+under the existing P3 semantics.
 The batch lookup reads timestamp/uht_temp with a batch predicate; hourly and
 line/date aggregates provide separate workloads. There is no evidence here for
 multi-partition pruning speedup, real factory causality or a cross-format

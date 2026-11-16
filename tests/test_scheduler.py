@@ -43,3 +43,10 @@ def test_scheduler_subprocess_lock_and_sigterm(tmp_path):
         assert all(r['decision'] == 'SKIP' for r in MaintenanceHistory(root / 'maintenance.jsonl').records())
     finally:
         if child.poll() is None: child.kill(); child.wait(timeout=5)
+
+
+def test_scheduled_preview_forwards_action(tmp_path):
+    root = tmp_path/'storage_demo'
+    policy = MaintenancePolicy(str(root/'table'),str(root))
+    scheduler = build_scheduler([policy],MaintenanceRunner(root/'history.jsonl'),action='vacuum_preview')
+    assert scheduler.get_jobs()[0].kwargs['action'] == 'vacuum_preview'

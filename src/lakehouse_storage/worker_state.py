@@ -1,5 +1,6 @@
 """Local bookkeeping and POSIX single-process ownership, not a Delta ledger."""
 import json
+import math
 import os
 import re
 import tempfile
@@ -69,11 +70,16 @@ class StateStore:
                 raise ValueError('checkpoint identity mismatch')
             if record['status'] not in self.STATUSES:
                 raise ValueError('unknown checkpoint status')
-            if not isinstance(record['attempts'], int) or record['attempts'] < 0:
+            if type(record['attempts']) is not int or record['attempts'] < 0:
                 raise ValueError('invalid attempt count')
-            if record['status'] in {'BRONZE_READY', 'PROCESSING', 'DONE'}:
+            durations = record.get('durations', {})
+            if not isinstance(durations, dict) or any(type(v) not in {int, float} or not math.isfinite(v) or v < 0 for v in durations.values()):
+                raise ValueError('invalid checkpoint durations')
+            if record['status'] in {'BRONZE_READY', 'PROCESSING', 'DONE'} or record.get('bronze_path'):
                 if not all(record.get(k) for k in ('bronze_path', 'bronze_sha256', 'payload_sha256')):
                     raise ValueError('checkpoint artifact evidence missing')
+                if not isinstance(record['bronze_path'], str) or any(not isinstance(record[k], str) or not re.fullmatch('[a-f0-9]{64}', record[k]) for k in ('bronze_sha256', 'payload_sha256')):
+                    raise ValueError('invalid artifact digest/path')
             return record
         except (ValueError, KeyError, TypeError) as exc:
             atomic_json(path.with_suffix('.review.json'), {'status': 'NEEDS_REVIEW', 'reason': str(exc)})

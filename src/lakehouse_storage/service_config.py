@@ -29,6 +29,13 @@ def require_namespace(target, root):
     return target
 
 
+def require_local_tree(target, root):
+    path = Path(require_namespace(target, root)).resolve()
+    if path.exists() and any(entry.is_symlink() for entry in path.rglob('*')):
+        raise ValueError('demo output tree must not contain descendant symlinks')
+    return path
+
+
 @dataclass(frozen=True)
 class ServiceConfig:
     root: Path

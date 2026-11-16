@@ -10,6 +10,7 @@ from deltalake import DeltaTable
 from lakehouse_storage.config import get_storage_options
 from lakehouse_storage.maintenance import compact_table, get_file_sizes, vacuum_table, zorder_table
 from lakehouse_storage.maintenance_history import MaintenanceHistory
+from lakehouse_storage.service_config import require_local_tree, require_namespace
 
 
 def snapshot(table_uri):
@@ -51,6 +52,9 @@ class MaintenanceRunner:
                 return record
             if action not in {'compact', 'zorder', 'vacuum_preview'}:
                 raise ValueError('unsupported maintenance action')
+            require_namespace(policy.table_uri, policy.allow_root)
+            if not policy.table_uri.startswith('s3://'):
+                require_local_tree(policy.table_uri, policy.allow_root)
             record['before'] = snapshot(policy.table_uri)
             if action == 'compact':
                 sizes = record['before']['file_sizes_bytes']

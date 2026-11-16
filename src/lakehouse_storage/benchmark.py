@@ -8,6 +8,8 @@ import time
 from pathlib import Path
 
 import requests
+from deltalake import DeltaTable
+from lakehouse_storage.config import get_storage_options
 
 from lakehouse_storage.benchmark_workloads import QUERY_TEXT, business_frame, fingerprint, measure, query, verify_equal
 from lakehouse_storage.ingestion_worker import IngestionWorker
@@ -23,7 +25,10 @@ def environment(report_dir):
                 ['polars', 'pyarrow', 'deltalake', 'numpy', 'great_expectations', 'fastapi', 'APScheduler']}
     limits = {name: Path('/sys/fs/cgroup', name).read_text().strip()
               for name in ['memory.max', 'cpu.max'] if Path('/sys/fs/cgroup', name).exists()}
-    return {'python': platform.python_version(), 'platform': platform.platform(), 'cpu': platform.processor(),
+    cpuinfo = Path('/proc/cpuinfo')
+    cpu = next((line.split(':',1)[1].strip() for line in cpuinfo.read_text().splitlines() if line.startswith('model name')), platform.processor()) if cpuinfo.exists() else platform.processor()
+    return {'python': platform.python_version(), 'platform': platform.platform(), 'cpu': cpu,
+            'implementation_revision': os.getenv('STORAGE_DEMO_REVISION', 'unknown'),
             'cpu_count': os.cpu_count(), 'ram_bytes': os.sysconf('SC_PAGE_SIZE') * os.sysconf('SC_PHYS_PAGES'),
             'disk_free_bytes': shutil.disk_usage(report_dir).free, 'container_limits': limits, 'packages': packages}
 
@@ -48,6 +53,10 @@ def run_benchmark(*, mock_url, work_root, silver_root, allow_root, report_dir,
     reference = None
     runner = MaintenanceRunner(report_dir / 'operations.jsonl')
     for size in batch_sizes:
+        remote = silver_root.rstrip('/') + f'/batch_{size}'
+        if any(DeltaTable.is_deltatable(remote + '/' + table, storage_options=get_storage_options())
+               for table in ('sensor_telemetry', 'mes_lims')):
+            raise ValueError('benchmark refuses existing Delta targets')
         response = requests.post(mock_url.rstrip('/') + '/runs', json={
             'samples_per_batch': size, 'batches': rows // size, 'seed': seed}, timeout=120)
         response.raise_for_status()
@@ -63,6 +72,9 @@ def run_benchmark(*, mock_url, work_root, silver_root, allow_root, report_dir,
             raise RuntimeError(f'benchmark ingestion failed: {records}')
         uri = remote + '/sensor_telemetry'
         accepted = business_frame(uri)
+        written = sum(r['rows_written'] for r in records if r['table_name'] == 'sensor_telemetry')
+        if accepted.height != written:
+            raise ValueError('accepted rows differ from P3 write evidence')
         if reference is not None:
             verify_equal(reference, accepted)
         reference = accepted

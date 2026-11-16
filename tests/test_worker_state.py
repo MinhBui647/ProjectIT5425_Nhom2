@@ -39,3 +39,11 @@ def test_namespace_rejects_shared_escape_and_symlink(tmp_path):
     for target in [root, tmp_path / 'shared', root / 'escape' / 'silver']:
         with pytest.raises(ValueError): require_namespace(target, root)
     with pytest.raises(ValueError): require_namespace('s3://smart-dairy-lakehouse/02_silver_curated/x', 's3://smart-dairy-lakehouse/02_silver_curated')
+
+
+@pytest.mark.parametrize('changes', [{'attempts':True}, {'durations':None}, {'durations':{'fetch_seconds':-1}}, {'status':'FAILED','bronze_path':'/some/path'}])
+def test_malformed_checkpoint_fields_need_review(tmp_path, changes):
+    state = StateStore(tmp_path)
+    record = {'run_id':'a'*32,'sequence':1,'table_name':'sensor_telemetry','status':'FETCHING','attempts':0, **changes}
+    state.save(record)
+    with pytest.raises(NeedsReview): state.load('a'*32,1)

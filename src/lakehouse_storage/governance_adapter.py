@@ -1,7 +1,7 @@
 """Lazy bridge to P3; never manufactures governance columns or PASS results."""
 from pathlib import Path
 
-from lakehouse_storage.service_config import require_namespace
+from lakehouse_storage.service_config import require_namespace, require_local_tree
 
 
 def classify_result(result):
@@ -22,6 +22,10 @@ def process_file(path, table_name, config):
 
     path = Path(require_namespace(path, config.root / 'bronze'))
     require_namespace(config.silver_root, config.silver_allow_root)
+    if not config.silver_root.startswith('s3://'):
+        require_local_tree(Path(config.silver_root) / table_name, config.silver_allow_root)
+    for child in ('reports', 'quarantine'):
+        require_local_tree(config.root / child, config.root)
     result = process_bronze_file(
         path, bronze_root=config.root / 'bronze', table_name=table_name,
         silver_root=config.silver_root, fail_threshold=DEFAULT_ERROR_THRESHOLD,

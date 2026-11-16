@@ -51,3 +51,15 @@ def test_publishing_crash_requires_review(tmp_path):
     worker.state.save({'run_id': client.run['run_id'], 'sequence': 1, 'table_name': 'sensor_telemetry', 'status': 'PUBLISHING', 'attempts': 1})
     with pytest.raises(NeedsReview): worker.publish(client.run['run_id'], 1)
     assert not list(root.rglob('*.parquet'))
+
+
+def test_descendant_symlink_cannot_publish_outside_demo(tmp_path):
+    root = tmp_path/'storage_demo'
+    client = LocalClient(root)
+    worker = IngestionWorker(config(root), client)
+    outside = tmp_path/'shared_bronze'; outside.mkdir()
+    worker.bronze_root.mkdir(parents=True, exist_ok=True)
+    (worker.bronze_root/'sensor_telemetry').symlink_to(outside, target_is_directory=True)
+    with pytest.raises(ValueError, match='symlink|namespace'):
+        worker.publish(client.run['run_id'],1)
+    assert not list(outside.iterdir())

@@ -7,7 +7,7 @@ import pyarrow as pa
 
 from lakehouse_storage.bronze_writer import write_bronze_batch, verify_checksum
 from lakehouse_storage.schemas import get_bronze_schema
-from lakehouse_storage.service_config import require_namespace
+from lakehouse_storage.service_config import require_namespace, require_local_tree
 from lakehouse_storage.utils import sha256_file
 from lakehouse_storage.worker_state import NeedsReview, StateStore
 
@@ -31,7 +31,7 @@ class IngestionWorker:
         self.config, self.client = config, client
         self.bronze_root = Path(require_namespace(config.root / 'bronze', config.root))
         require_namespace(config.silver_root, config.silver_allow_root)
-        self.state = StateStore(config.root / 'worker_state')
+        self.state = StateStore(require_local_tree(config.root / 'worker_state', config.root))
 
     def review(self, record, reason):
         record.update(status='NEEDS_REVIEW', reason=reason,
@@ -40,6 +40,7 @@ class IngestionWorker:
         raise NeedsReview(reason)
 
     def publish(self, run_id, sequence):
+        require_local_tree(self.bronze_root, self.config.root)
         record = self.state.load(run_id, sequence) or {
             'run_id': run_id, 'sequence': sequence,
             'table_name': 'mes_lims' if sequence == 0 else 'sensor_telemetry',
@@ -52,12 +53,17 @@ class IngestionWorker:
             if not path.is_file() or not verify_checksum(path) or sha256_file(path) != record['bronze_sha256']:
                 self.review(record, 'known Bronze checksum mismatch or missing artifact')
             return record
+        if record['status'] == 'REJECTED':
+            return record
+        record.setdefault('durations', {})
         record['status'] = 'FETCHING'
         record['attempts'] += 1
         self.state.save(record)
         started = time.perf_counter()
         envelope = self.client.batch(run_id, sequence)
         record['durations']['fetch_seconds'] = time.perf_counter() - started
+        if record.get('payload_sha256') and record['payload_sha256'] != envelope['payload_sha256']:
+            self.review(record, 'payload identity changed across retry')
         record['payload_sha256'] = envelope['payload_sha256']
         frame = raw_frame(envelope)
         record['status'] = 'PUBLISHING'
@@ -105,7 +111,7 @@ class IngestionWorker:
             if stop.is_set():
                 break
             existing = self.state.load(run_id, sequence)
-            if existing and existing['status'] == 'DONE':
+            if existing and (existing['status'] == 'DONE' or (skip_rejected and existing['status'] == 'REJECTED')):
                 continue
             if limit is not None and processed >= limit:
                 break
@@ -117,6 +123,8 @@ class IngestionWorker:
                 record = self.state.load(run_id, sequence)
                 if record is None:
                     raise
+                if record['status'] == 'PUBLISHING':
+                    self.review(record, f'publication outcome unknown: {exc}')
                 record.update(status='FAILED', reason=str(exc), stage='fetch', rows_written=None)
                 self.state.save(record)
             records.append(record)

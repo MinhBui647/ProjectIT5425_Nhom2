@@ -44,3 +44,15 @@ def test_query_measurement_and_correctness_guard():
     metric = measure(lambda: count.append(1), repeats=5, warmups=1)
     assert len(count) == 6 and len(metric['raw_seconds']) == 5
     with pytest.raises(AssertionError): verify_equal(pl.DataFrame({'x':[1]}), pl.DataFrame({'x':[2]}))
+
+
+def test_existing_target_rejected_before_http(tmp_path):
+    from lakehouse_storage.benchmark import run_benchmark
+    from lakehouse_storage.config import get_storage_options
+    from deltalake import write_deltalake
+    import polars as pl
+    allowed = tmp_path/'storage_benchmark'
+    silver = allowed/'existing'
+    write_deltalake(str(silver/'batch_10'/'sensor_telemetry'), pl.DataFrame({'id':[1]}).to_arrow(), storage_options=get_storage_options())
+    with pytest.raises(ValueError, match='existing Delta'):
+        run_benchmark(mock_url='http://unused', work_root=allowed/'new_work', silver_root=str(silver), allow_root=str(allowed), report_dir=tmp_path/'report', rows=40,batch_sizes=[10])
