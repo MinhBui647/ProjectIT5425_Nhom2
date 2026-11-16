@@ -14,8 +14,8 @@ def generate_batches(request, run_id):
                              production_end=start + timedelta(seconds=request.samples_per_batch * request.batches),
                              seed=request.seed)
     yield 'mes_lims', mes.with_columns(pl.lit(start.isoformat()).alias('_generated_at')).to_dicts()
+    frame = generate_sensor_batch(request.samples_per_batch * request.batches,
+                                  batch_id=batch_id, start_time=start, seed=request.seed)
+    frame = frame.with_columns(pl.lit(start.isoformat()).alias('_generated_at'))
     for i in range(request.batches):
-        frame = generate_sensor_batch(request.samples_per_batch, batch_id=batch_id,
-                                      start_time=start + timedelta(seconds=i * request.samples_per_batch),
-                                      seed=(request.seed + i) % 2**32)
-        yield 'sensor_telemetry', frame.with_columns(pl.lit(start.isoformat()).alias('_generated_at')).to_dicts()
+        yield 'sensor_telemetry', frame.slice(i * request.samples_per_batch, request.samples_per_batch).to_dicts()

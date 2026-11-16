@@ -44,3 +44,13 @@ def test_missing_run_or_sequence(tmp_path):
     with pytest.raises(FileNotFoundError): store.run('a' * 32)
     run = store.create(RunRequest(samples_per_batch=2, batches=1))
     with pytest.raises(FileNotFoundError): store.batch(run['run_id'], 2)
+
+
+def test_batch_size_does_not_change_logical_sensor_samples(tmp_path):
+    store = RunStore(tmp_path)
+    runs = [store.create(RunRequest(samples_per_batch=size, batches=12//size)) for size in (3,6)]
+    datasets = []
+    for run in runs:
+        rows = [row for seq in range(1, run['batch_count']) for row in json.loads(store.batch(run['run_id'],seq))['data']]
+        datasets.append([{k:v for k,v in row.items() if k != 'batch_id'} for row in rows])
+    assert datasets[0] == datasets[1]
