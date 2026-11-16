@@ -18,8 +18,8 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 - [x] T02: Sửa lookup version theo thời điểm
 - [x] T03: Truy vết mọi nguồn Bronze của batch
 - [x] T04: Mock run và kho payload tái lập
-- [ ] T05: Mock HTTP API có entry point
-- [ ] T06: Mock scenarios và replay
+- [x] T05: Mock HTTP API có entry point
+- [x] T06: Mock scenarios và replay
 - [ ] T07: Client và checkpoint Bronze tối thiểu
 - [ ] T08: Adapter gọi P3 hiện có
 - [ ] T09: Worker loop, retry và resume có giới hạn
@@ -167,15 +167,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Bốn endpoints trả envelope/schema rõ; 404 cho unknown run/sequence, 422 cho control request sai.
-- [ ] GET batch giữ bytes/digest qua HTTP và restart; mock không ghi Bronze/Silver hoặc cần credential MinIO.
-- [ ] CLI/env cấu hình host/port/store, readiness kiểm tra store; import core không kéo dependencies API.
+- [x] Bốn endpoints trả envelope/schema rõ; 404 cho unknown run/sequence, 422 cho control request sai.
+- [x] GET batch giữ bytes/digest qua HTTP và restart; mock không ghi Bronze/Silver hoặc cần credential MinIO.
+- [x] CLI/env cấu hình host/port/store, readiness kiểm tra store; import core không kéo dependencies API.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_mock_api.py tests/test_mock_runs.py tests/test_storage_compatibility.py -q`
-- [ ] Chạy python -m lakehouse_storage.mock_server; gọi HTTP thật GET /health, POST /runs, GET batch trong smoke test.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_mock_api.py tests/test_mock_runs.py tests/test_storage_compatibility.py -q`
+- [x] Chạy python -m lakehouse_storage.mock_server; gọi HTTP thật GET /health, POST /runs, GET batch trong smoke test.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T04
 
@@ -188,7 +188,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (4 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** Mock scenarios/API/runs/compatibility: 17 pass; HTTP subprocess restart byte-identical. TestClient needs unsandboxed event-loop execution in this environment.
 
 ### T06: Mock scenarios và replay
 
@@ -196,15 +196,15 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Tiêu chí nghiệm thu:**
 
-- [ ] Run/sequence quy định rõ lỗi và số attempts lỗi; cùng cấu hình tái hiện được, không ảnh hưởng run khác.
-- [ ] Control API sai vẫn bị từ chối; raw scenario payload có lỗi cố ý được trả cho worker; missing-field có expected reject stage riêng.
-- [ ] Replay giữ payload cũ; delay/500 có giới hạn, không làm hỏng payload store.
+- [x] Run/sequence quy định rõ lỗi và số attempts lỗi; cùng cấu hình tái hiện được, không ảnh hưởng run khác.
+- [x] Control API sai vẫn bị từ chối; raw scenario payload có lỗi cố ý được trả cho worker; missing-field có expected reject stage riêng.
+- [x] Replay giữ payload cũ; delay/500 có giới hạn, không làm hỏng payload store.
 
 **Kiểm chứng:**
 
-- [ ] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_mock_scenarios.py tests/test_mock_api.py -q`
-- [ ] Viết bảng scenario -> HTTP outcome -> Bronze/P3 expected outcome, dùng lại ở E2E T14.
-- [ ] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
+- [x] `PYTHONPATH=src .venv/bin/python -m pytest tests/test_mock_scenarios.py tests/test_mock_api.py -q`
+- [x] Viết bảng scenario -> HTTP outcome -> Bronze/P3 expected outcome, dùng lại ở E2E T14.
+- [x] Ghi kết quả, command thực chạy và artifact evidence vào mục hoàn thành.
 
 **Phụ thuộc:** T05
 
@@ -217,7 +217,7 @@ Gói đã được người dùng chọn: mock server + ingestion worker tối t
 
 **Phạm vi:** M (4 file chính).
 
-**Bằng chứng hoàn thành:** Chưa có.
+**Bằng chứng hoàn thành:** RED 5 failures; GREEN included in 17 pass. Persistent per-sequence attempt counts, bounded delay, deterministic raw faults.
 
 ### Checkpoint CP-B: sau T04–T06
 

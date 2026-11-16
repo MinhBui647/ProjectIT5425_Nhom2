@@ -7,6 +7,7 @@ import uuid
 from pathlib import Path
 
 from lakehouse_storage.mock_server.generator import generate_batches
+from lakehouse_storage.mock_server.scenarios import apply_payload_fault
 
 MAX_RESPONSE_BYTES = 32 * 1024 * 1024
 
@@ -32,6 +33,8 @@ class RunStore:
         metadata = {'run_id': run_id, 'batch_count': request.batches + 1,
                     'request': request.model_dump(mode='json')}
         for sequence, (table, rows) in enumerate(generate_batches(request, run_id)):
+            if table == 'sensor_telemetry':
+                rows = apply_payload_fault(rows, request.scenario)
             envelope = {'run_id': run_id, 'sequence': sequence, 'table_name': table,
                         'payload_sha256': hashlib.sha256(canonical_json(rows)).hexdigest(), 'data': rows}
             content = canonical_json(envelope)
