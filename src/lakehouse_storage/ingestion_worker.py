@@ -31,6 +31,8 @@ class IngestionWorker:
         self.config, self.client = config, client
         self.bronze_root = Path(require_namespace(config.root / 'bronze', config.root))
         require_namespace(config.silver_root, config.silver_allow_root)
+        self.silver_root = (config.silver_root.rstrip('/') if config.silver_root.startswith('s3://')
+                            else str(Path(config.silver_root).resolve()))
         self.state = StateStore(require_local_tree(config.root / 'worker_state', config.root))
 
     def review(self, record, reason):
@@ -40,11 +42,13 @@ class IngestionWorker:
         raise NeedsReview(reason)
 
     def publish(self, run_id, sequence):
+        self.state.bind_target(run_id, self.silver_root)
         require_local_tree(self.bronze_root, self.config.root)
-        record = self.state.load(run_id, sequence) or {
+        record = self.state.load(run_id, sequence, silver_root=self.silver_root) or {
             'run_id': run_id, 'sequence': sequence,
             'table_name': 'mes_lims' if sequence == 0 else 'sensor_telemetry',
             'status': 'FETCHING', 'attempts': 0, 'durations': {},
+            'silver_uri': f"{self.silver_root}/{'mes_lims' if sequence == 0 else 'sensor_telemetry'}",
         }
         if record['status'] in {'PUBLISHING', 'NEEDS_REVIEW'}:
             self.review(record, 'publication outcome unknown; inspect artifacts before resuming')
@@ -105,12 +109,14 @@ class IngestionWorker:
     def run(self, run_id, limit=None, skip_rejected=False, stop=None):
         import threading
         stop = stop or threading.Event()
+        self.state.bind_target(run_id, self.silver_root)
+        self.state.validate_targets(run_id, self.silver_root)
         metadata = self.client.run(run_id)
         records, processed = [], 0
         for sequence in range(metadata['batch_count']):
             if stop.is_set():
                 break
-            existing = self.state.load(run_id, sequence)
+            existing = self.state.load(run_id, sequence, silver_root=self.silver_root)
             if existing and (existing['status'] == 'DONE' or (skip_rejected and existing['status'] == 'REJECTED')):
                 continue
             if limit is not None and processed >= limit:

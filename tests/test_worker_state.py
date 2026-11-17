@@ -90,3 +90,32 @@ def test_s3_namespace_compares_bucket_and_segments():
                     target.replace('smart-dairy-storage-demo', 'other-bucket')]:
         with pytest.raises(ValueError):
             require_namespace(invalid, root)
+
+
+def test_run_target_binding_preserves_original_evidence(tmp_path):
+    state = StateStore(tmp_path)
+    run_id = 'd' * 32
+    first = 's3://smart-dairy-storage-demo/storage_demo/a'
+    state.bind_target(run_id, first)
+    target = state.path(run_id, 0).parent / 'target.json'
+    evidence = target.read_bytes()
+    state.bind_target(run_id, first)
+    with pytest.raises(NeedsReview, match='target'):
+        state.bind_target(run_id, first + '_other')
+    assert target.read_bytes() == evidence
+    assert target.with_suffix('.review.json').exists()
+
+
+def test_run_preflight_checks_later_checkpoint_before_starting(tmp_path):
+    state = StateStore(tmp_path)
+    run_id = 'e' * 32
+    root = str(tmp_path / 'silver')
+    state.bind_target(run_id, root)
+    record = {'run_id': run_id, 'sequence': 9, 'table_name': 'sensor_telemetry',
+              'status': 'FETCHING', 'attempts': 0, 'silver_uri': root + '_other/sensor_telemetry'}
+    state.save(record)
+    path = state.path(run_id, 9)
+    evidence = path.read_bytes()
+    with pytest.raises(NeedsReview, match='target'):
+        state.validate_targets(run_id, root)
+    assert path.read_bytes() == evidence

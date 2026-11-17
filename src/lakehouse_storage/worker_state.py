@@ -59,7 +59,27 @@ class StateStore:
             raise ValueError('invalid checkpoint status')
         atomic_json(self.path(record['run_id'], record['sequence']), record)
 
-    def load(self, run_id, sequence):
+    def bind_target(self, run_id, silver_root):
+        path = self.path(run_id, 0).parent / 'target.json'
+        expected = {'run_id': run_id, 'silver_root': silver_root}
+        if path.exists():
+            try:
+                if json.loads(path.read_text()) != expected:
+                    raise ValueError('Silver target differs from the saved run target')
+            except (ValueError, TypeError) as exc:
+                atomic_json(path.with_suffix('.review.json'), {'status': 'NEEDS_REVIEW', 'reason': str(exc)})
+                raise NeedsReview(f'checkpoint target needs review: {path}') from exc
+        else:
+            # Legacy evidence must identify the destination before a run can bind.
+            self.validate_targets(run_id, silver_root)
+            atomic_json(path, expected)
+
+    def validate_targets(self, run_id, silver_root):
+        for path in self.path(run_id, 0).parent.glob('*.json'):
+            if path.stem.isdecimal():
+                self.load(run_id, int(path.stem), silver_root=silver_root)
+
+    def load(self, run_id, sequence, *, silver_root=None):
         path = self.path(run_id, sequence)
         if not path.exists():
             return None
@@ -68,6 +88,8 @@ class StateStore:
             table = 'mes_lims' if sequence == 0 else 'sensor_telemetry'
             if (record['run_id'], record['sequence'], record['table_name']) != (run_id, sequence, table):
                 raise ValueError('checkpoint identity mismatch')
+            if silver_root is not None and record.get('silver_uri') != f'{silver_root}/{table}':
+                raise ValueError('checkpoint Silver target missing or mismatched')
             if record['status'] not in self.STATUSES:
                 raise ValueError('unknown checkpoint status')
             if type(record['attempts']) is not int or record['attempts'] < 0:
@@ -87,9 +109,11 @@ class StateStore:
                     raise ValueError('DONE requires successful P3 evidence')
                 if (result.get('table_name'), result.get('bronze_file')) != (table, record['bronze_path']):
                     raise ValueError('DONE P3 identity mismatch')
+                if 'silver_uri' in record and result.get('silver_uri') != record['silver_uri']:
+                    raise ValueError('DONE P3 target mismatch')
                 if type(record.get('rows_written')) is not int or record['rows_written'] != result['rows_written']:
                     raise ValueError('DONE rows_written evidence mismatch')
             return record
         except (ValueError, KeyError, TypeError) as exc:
             atomic_json(path.with_suffix('.review.json'), {'status': 'NEEDS_REVIEW', 'reason': str(exc)})
-            raise NeedsReview(f'corrupt checkpoint: {path}') from exc
+            raise NeedsReview(f'corrupt checkpoint: {path}: {exc}') from exc

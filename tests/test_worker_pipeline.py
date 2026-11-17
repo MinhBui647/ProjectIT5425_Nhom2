@@ -99,3 +99,60 @@ def test_once_skip_policy_advances_past_terminal_rejection(tmp_path):
         worker.run(run['run_id'],limit=2,skip_rejected=True)
         worker.run(run['run_id'],limit=1,skip_rejected=True)
         assert worker.state.load(run['run_id'],2)['status'] == 'REJECTED'
+
+
+@pytest.mark.parametrize('entry', ['run', 'publish', 'replay'])
+def test_changed_target_fails_before_any_side_effect(tmp_path, entry):
+    import requests
+    from lakehouse_storage.worker_state import NeedsReview
+    from lakehouse_storage.config import get_storage_options
+    from deltalake import DeltaTable
+    root = tmp_path / 'storage_demo'
+    with mock_http(root) as (url, _):
+        run = requests.post(url + '/runs', json={'samples_per_batch': 10, 'batches': 1}, timeout=5).json()
+        worker = make_worker(root, url)
+        worker.run(run['run_id'])
+        uri = str(root / 'silver' / 'sensor_telemetry')
+        before = pl.read_delta(uri, storage_options=get_storage_options())
+        checkpoint = worker.state.path(run['run_id'], 1)
+        evidence = checkpoint.read_bytes()
+        artifacts = sorted((str(p), p.read_bytes()) for p in worker.bronze_root.rglob('*') if p.is_file())
+        changed = IngestionWorker(ServiceConfig(root, str(root / 'silver_b'), str(root), url), MockClient(url))
+        with pytest.raises(NeedsReview, match='target'):
+            if entry == 'run':
+                changed.run(run['run_id'])
+            elif entry == 'publish':
+                changed.publish(run['run_id'], 2)
+            else:
+                changed.process(run['run_id'], 1, replay=True)
+        assert not (root / 'silver_b').exists()
+        assert checkpoint.read_bytes() == evidence
+        assert sorted((str(p), p.read_bytes()) for p in worker.bronze_root.rglob('*') if p.is_file()) == artifacts
+        assert before.equals(pl.read_delta(uri, storage_options=get_storage_options()))
+        assert DeltaTable(uri, storage_options=get_storage_options()).version() == 0
+        assert make_worker(root, url).run(run['run_id']) == []
+        replay = make_worker(root, url).process(run['run_id'], 1, replay=True)
+        assert replay['p3_result']['status'] == 'SKIPPED_DUPLICATE'
+        fresh_root = tmp_path / 'storage_demo_fresh' / 'storage_demo'
+        fresh = IngestionWorker(ServiceConfig(fresh_root, str(root / 'silver_b'), str(root), url), MockClient(url))
+        assert all(r['status'] == 'DONE' for r in fresh.run(run['run_id']))
+        assert pl.read_delta(str(root / 'silver_b' / 'sensor_telemetry'), storage_options=get_storage_options()).height == 10
+
+
+def test_legacy_checkpoint_needs_review_without_modification(tmp_path):
+    import requests
+    from lakehouse_storage.worker_state import NeedsReview
+    root = tmp_path / 'storage_demo'
+    with mock_http(root) as (url, _):
+        run = requests.post(url + '/runs', json={'samples_per_batch': 5, 'batches': 1}, timeout=5).json()
+        worker = make_worker(root, url)
+        record = worker.publish(run['run_id'], 1)
+        record.pop('silver_uri', None)
+        worker.state.save(record)
+        path = worker.state.path(run['run_id'], 1)
+        before = path.read_bytes()
+        with pytest.raises(NeedsReview, match='target'):
+            worker.run(run['run_id'])
+        assert path.read_bytes() == before
+        assert not (root / 'silver').exists()
+        assert not worker.state.path(run['run_id'], 0).exists()

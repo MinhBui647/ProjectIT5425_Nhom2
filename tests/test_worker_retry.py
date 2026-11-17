@@ -102,3 +102,18 @@ def test_cli_sigterm_completes_inflight_batch(tmp_path):
             assert not (root / 'worker_state' / run['run_id'] / '2.json').exists()
         finally:
             if child.poll() is None: child.kill(); child.wait(timeout=5)
+
+
+def test_cli_changed_silver_target_exits_nonzero(tmp_path):
+    root = tmp_path / 'storage_demo'
+    with mock_http(root) as (url, _):
+        run = requests.post(url + '/runs', json={'samples_per_batch': 5, 'batches': 1}, timeout=5).json()
+        make_worker(root, url).run(run['run_id'])
+        env = {**os.environ, 'PYTHONPATH': 'src', 'STORAGE_DEMO_ROOT': str(root),
+               'STORAGE_DEMO_SILVER_ROOT': str(root / 'silver_b'),
+               'STORAGE_DEMO_SILVER_ALLOW_ROOT': str(root), 'MOCK_URL': url}
+        child = subprocess.run([sys.executable, '-B', '-m', 'lakehouse_storage.ingestion_worker',
+                                '--run-id', run['run_id']], env=env, capture_output=True, text=True, timeout=30)
+        assert child.returncode != 0
+        assert 'target' in child.stderr.lower()
+        assert not (root / 'silver_b').exists()
