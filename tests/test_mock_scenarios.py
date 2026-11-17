@@ -18,7 +18,11 @@ def test_payload_faults(tmp_path, scenario, field, expected):
     assert response.content == client.get(route).content
 
 
-def test_transient_attempts_persist(tmp_path):
+@pytest.mark.parametrize('first_digit', ['1', '2'])
+def test_transient_attempts_persist(tmp_path, monkeypatch, first_digit):
+    import uuid
+    monkeypatch.setattr('lakehouse_storage.mock_server.store.uuid.uuid4',
+                        lambda: uuid.UUID(first_digit + 'a' * 31))
     client = TestClient(create_app(tmp_path))
     run = client.post('/runs', json={'scenario': 'transient-500', 'failure_attempts': 2}).json()
     route = f"/runs/{run['run_id']}/batches/1"
@@ -26,7 +30,7 @@ def test_transient_attempts_persist(tmp_path):
     client = TestClient(create_app(tmp_path))
     assert client.get(route).status_code == 500
     assert client.get(route).status_code == 200
-    assert client.get(route.replace('/1', '/2')).status_code == 500
+    assert client.get(f"/runs/{run['run_id']}/batches/2").status_code == 500
 
 
 def test_delay_is_bounded_and_payload_unchanged(tmp_path):
