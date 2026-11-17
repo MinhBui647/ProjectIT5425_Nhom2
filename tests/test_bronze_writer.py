@@ -376,3 +376,31 @@ def test_verify_mixed_relative_root_keeps_containment_and_checksums(tmp_path, mo
     assert 'does not belong' in results[1]['error']
     assert all('error' in results[i] for i in (2, 3))
     assert verify_checksum(good)
+
+
+@pytest.mark.parametrize(('value', 'partition'), [
+    ('15/01/2026', '2026-01-15'), ('01/15/2026', '2026-01-15'),
+    ('01/02/2026', '2026-02-01'), ('2026-01-15T10:00:00Z', '2026-01-15'),
+    ('2026-01-15', '2026-01-15'), ('31/02/2026', '2030-12-02'),
+    (None, '2030-12-02'), (datetime(2026, 1, 15, 10), '2026-01-15'),
+    (datetime(2026, 1, 15).date(), '2026-01-15'),
+])
+def test_raw_date_formats_choose_partition_without_changing_payload(tmp_path, monkeypatch, value, partition):
+    from lakehouse_storage import bronze_writer
+    class FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2030, 12, 2, 12, tzinfo=timezone.utc)
+    if not isinstance(value, datetime):
+        monkeypatch.setattr(bronze_writer, 'datetime', FrozenDatetime)
+    frame = pl.DataFrame({'timestamp': [value]})
+    path = Path(write_bronze_batch(frame, 'sensor_telemetry', tmp_path, validate_schema=False))
+    assert path.parent.name == partition
+    assert pl.read_parquet(path).equals(frame)
+    assert verify_checksum(path)
+
+
+def test_empty_batch_still_rejected_before_publication(tmp_path):
+    with pytest.raises(ValueError, match='empty'):
+        write_bronze_batch(pl.DataFrame({'timestamp': []}), 'sensor_telemetry', tmp_path, validate_schema=False)
+    assert not list(tmp_path.rglob('*.parquet'))

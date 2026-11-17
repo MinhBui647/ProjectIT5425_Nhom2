@@ -250,12 +250,12 @@ def _extract_date(df: pl.DataFrame, table_name: str) -> date:
                 # Try ISO format first
                 return datetime.fromisoformat(first.replace("Z", "+00:00")).date()
             except ValueError:
-                try:
-                    # Try common date formats
-                    for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]:
+                # Preserve DMY precedence for ambiguous raw dates.
+                for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]:
+                    try:
                         return datetime.strptime(first[:10], fmt).date()
-                except ValueError:
-                    continue
+                    except ValueError:
+                        continue
         elif isinstance(first, datetime):
             return first.date()
         elif isinstance(first, date):
