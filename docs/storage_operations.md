@@ -237,3 +237,48 @@ Verified 2026-11-17: MinIO/mock healthy, worker exit 0 (4001 rows reported),
 maintenance compaction 4 -> 1 sensor files, image `pip check` clean; all six S3 E2E
 tests passed. The Docker bridge DNS failed on this machine; host networking is
 used **only for build dependency download**, with isolated runtime networking.
+
+## Post-review governed writes and handoff (2026-11-17)
+
+For generator output consumed by Gold, use the CLI examples in
+[`lakehouse_storage/README.md`](../src/lakehouse_storage/README.md). Both CLIs now
+run P3; explicit `--silver-root` (or `STORAGE_GENERATOR_SILVER_ROOT`) is required
+for Delta output. JSON includes actual gate status/counts; FAIL exits 1. Existing
+low-level generator helpers remain available for storage-only callers and do not
+establish Gold eligibility. Existing tables missing any of `_contract_version`,
+`_quality_status`, `_quality_run_id` fail clearly; migration remains an explicit
+separate operation.
+
+Keep ingestion sequential. P3 checksum idempotency currently ignores date filters
+and has a check/append concurrency race. Reproducers and evidence are in
+`reports/storage/post_review_20261117/`. FAO `Month` datetime parsing is also a P3
+handoff: do not alter Bronze or lower the gate to load it. P2's relative crawler
+root differs from storage when launched at repo root; verify resolved roots before
+collecting new input. No downstream module was changed in this follow-up.
+
+Bronze publishing now uses exclusive reservations, same-filesystem staging and
+no-replace hard links (Linux verification). A `.parquet` appears only after its
+checksum is ready. Hidden staging, `.reserve`, or orphan `.sha256` may survive a
+crash; they are excluded from Parquet inputs. Preserve them for inspection rather
+than deleting or republishing blindly. Do not use a filesystem lacking exclusive
+creation/hard-link semantics for this protocol. Existing valid legacy pairs work.
+
+Silver named-table writes validate required/null/cast constraints before commit;
+existing nullable Delta metadata is not automatically migrated. Version diff now
+uses entity keys and raises on null/duplicate keys. For unknown table shapes,
+pass `id_column` explicitly (string/list/tuple). Updates sharing a key are outside
+added/removed semantics.
+
+Re-run isolated S3 verification:
+
+```bash
+docker compose -f infra/docker-compose.storage.yml up -d minio
+STORAGE_DEMO_MINIO_TEST=1 PYTHONPATH=src TMPDIR=/tmp \
+  PYTHONDONTWRITEBYTECODE=1 MPLCONFIGDIR=/tmp/storage-mpl \
+  .venv/bin/python -B -m pytest tests/test_storage_minio_demo.py -q -s
+```
+
+The demo bucket/prefix is separate from shared Silver. Maintenance remains a
+second phase after ingestion stops; vacuum remains preview-only. Local Delta
+verification uses `/tmp` paths without spaces due to the pinned environment's
+percent-encoded-path read limitation.

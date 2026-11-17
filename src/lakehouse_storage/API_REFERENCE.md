@@ -140,7 +140,8 @@ trace_batch(table_uri: str, batch_id: str, id_column: str = "batch_id") -> dict
 
 ### `diff_versions`
 ```python
-diff_versions(table_uri: str, v1: int, v2: int, id_column: str | None = None) -> dict
+diff_versions(table_uri: str, v1: int, v2: int,
+              id_column: str | list[str] | tuple[str, ...] | None = None) -> dict
 ```
 - **Chức năng**: So sánh 2 mốc version bất kỳ và tìm ra chính xác những dòng đã thêm vào (`added`) hoặc đã xóa đi (`removed`).
 
@@ -225,3 +226,55 @@ All mutable demo targets require allowlisted descendants and local output-tree
 checks. Maintenance flags/window are explicit; vacuum always previews, with a
 168-hour minimum and retention enforcement. Existing shared write policy and
 `ingestion_date` semantics remain unchanged.
+
+### Writer correctness (review follow-up, 2026-11-17)
+
+`append_to_delta()` and `ingest_bronze_file()` remain low-level storage APIs;
+callers must supply governed rows when targeting shared Silver. With a
+`table_name`, they reject missing/null required business fields and failed casts
+(including optional fields) before committing. Timestamp parse errors are rejected.
+New tables preserve business-field nullability; existing nullable Delta metadata
+is not migrated. Missing optional fields become typed nulls; extra operational
+fields retain their Arrow types. `_cast_to_schema(strict=False)` retains the
+legacy permissive cast behavior.
+
+`write_bronze_batch()` reserves names exclusively across local processes, stages
+bytes on the same filesystem, then links the checksum before the final Parquet.
+The final `.parquet` is the completion marker. Publication uses no-replace hard
+links and requires a filesystem supporting exclusive creation and hard links
+(tested on Linux). Timestamp and numeric collision suffixes remain readable by P3.
+A crash can leave hidden staging, a `.reserve` file or a checksum without Parquet;
+these are not inputs and are not automatically deleted. Existing valid legacy
+pairs remain readable. The pair is not a two-file atomic rename; this does not
+provide multi-writer Delta transactions or general orphan recovery.
+
+### Composite version differences
+
+`diff_versions` keeps `added`, `removed`, `counts`, and `id_column`. A string
+key returns a string `id_column`; a composite key returns the supplied list or
+tuple. Defaults use Silver entity keys: sensor `(line_id,timestamp)`, weather
+`(farm_id,observed_at)`, GDT `(source,product,contract,observed_at,currency,unit)`,
+FAO `(source,index_name,period_start)`, recalls `(source,recall_id)`, MES `batch_id`,
+metadata `file`. Unknown shapes retain the legacy fallback and log a suggestion
+to supply a key. Empty snapshots work; missing, null or duplicate keys raise
+`ValueError` instead of producing an ambiguous audit. Row order follows the
+source snapshot. Updates sharing an unchanged key are outside added/removed
+semantics. Anti joins compare keys without Python sets of all entity values.
+
+### `ingest_governed_bronze_file`
+
+```python
+ingest_governed_bronze_file(bronze_path, table_name, *, bronze_root,
+                          silver_root, reports_root) -> dict
+```
+
+Explicit roots are required. P3 is imported at call time and runs its unchanged
+transformers, threshold and duplicate gate. The full P3 result is returned,
+including FAIL outcomes without exceptions. Unexpected infrastructure failures
+return `status='FAIL'`, `error_category='infrastructure'`, `rows_written=0`, and
+`error`; a failure can still require checking commit state after an interrupted
+write. Existing tables must have `_contract_version`, `_quality_status`, and
+`_quality_run_id`; missing legacy metadata is reported without migration.
+Reports, figures and quarantine live below `reports_root`. Invalid paths/table
+arguments raise errors. No concurrent claim or transaction recovery is added.
+The demo worker's `process_file` namespace guard is unchanged.
