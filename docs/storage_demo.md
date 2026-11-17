@@ -1,12 +1,11 @@
-# Storage demo walkthrough
+# Hướng dẫn demo storage
 
-This walkthrough covers the isolated S1/S2 mock, sequential ingestion through P3,
-replay, rejection, maintenance and source tracing. Benchmark commands and measured
-results are linked in section 6.
+Luồng demo: mock S1/S2 → worker tuần tự → Bronze → P3 → Silver; sau đó chạy lại
+batch, kiểm tra từ chối, bảo trì và truy vết. Benchmark và kết quả đo ở mục 6.
 
-## 1. Start the isolated stack
+## 1. Khởi động môi trường riêng
 
-Chạy từ thư mục gốc repository. Cách dùng Docker cho mock + MinIO:
+Chạy tại thư mục gốc repository. Dùng Docker cho mock và MinIO:
 
 ```bash
 docker compose -f infra/docker-compose.storage.yml build mock
@@ -15,20 +14,20 @@ export MOCK_URL=http://127.0.0.1:18010
 curl --fail --silent --show-error --retry 10 --retry-connrefused --retry-delay 1 "$MOCK_URL/health"
 ```
 
-Health phải trả `{"status":"ok"}`. Swagger UI:
-[http://127.0.0.1:18010/docs](http://127.0.0.1:18010/docs). MinIO ở cổng 19000.
-Để chạy worker trên host ở mục 2, tạo/activate service venv theo
-[storage_operations.md](storage_operations.md#local-service-environment).
+Health trả `{"status":"ok"}`. Swagger UI:
+[http://127.0.0.1:18010/docs](http://127.0.0.1:18010/docs); MinIO dùng cổng 19000.
+Worker trên host cần venv theo
+[Môi trường dịch vụ](storage_operations.md#local-service-environment).
 
-Nếu chạy mock bằng Python local, dùng hướng dẫn
-[setup mock server](storage_operations.md#b-chạy-bằng-python-local), giữ terminal
-server mở và đặt `MOCK_URL=http://127.0.0.1:8010` ở terminal worker. Hướng dẫn đó
-cũng có lệnh curl tạo run, lấy MES/sensor và các lỗi thường gặp. Mock chỉ cung cấp
-HTTP; worker ở mục 2 mới thực hiện ghi Bronze/P3/Silver. No shared tables are used.
+Nếu chạy mock bằng Python local, làm theo
+[hướng dẫn](storage_operations.md#b-chạy-bằng-python-local), giữ terminal server
+mở và đặt `MOCK_URL=http://127.0.0.1:8010` trong terminal worker. Mock chỉ cung cấp
+HTTP; worker ghi Bronze, gọi P3 và ghi Silver trong namespace demo riêng.
 
-## 2. Normal ingestion and replay
+<a id="2-normal-ingestion-and-replay"></a>
+## 2. Nạp dữ liệu và chạy lại batch
 
-Use a fresh session name for each demo. In a terminal using the service venv:
+Dùng tên phiên mới cho mỗi demo. Tại terminal đã kích hoạt venv:
 
 ```bash
 export PYTHONPATH=src
@@ -42,20 +41,20 @@ export MOCK_URL="${MOCK_URL:-http://127.0.0.1:18010}"
 python -m lakehouse_storage.ingestion_worker --create-run
 ```
 
-The first sequence is MES; remaining sequences are sensor chunks in that MES
-production window. The worker stores `active_run.json`. Read its run id, then:
+Sequence đầu là MES; các sequence sau là sensor trong cửa sổ sản xuất MES đó.
+Worker lưu `active_run.json`. Lấy run ID trong tệp rồi chạy:
 
 ```bash
 python -m lakehouse_storage.ingestion_worker --run-id RUN_ID --replay-sequence 1
 ```
 
-Expect P3 `SKIPPED_DUPLICATE`, reported rows=0 and unchanged Silver row count.
-All actual writes run through P3. `_contract_version`, `_quality_status`,
-`_quality_run_id` and lineage columns come from P3, with existing types/partitions.
+Kỳ vọng: P3 trả `SKIPPED_DUPLICATE`, số dòng ghi mới bằng 0, tổng dòng Silver
+không đổi. P3 tạo `_contract_version`, `_quality_status`, `_quality_run_id` và
+các cột lineage; giữ kiểu dữ liệu và partition hiện có.
 
-## 3. Demonstrate a rejection
+## 3. Kiểm tra batch bị từ chối
 
-Use a fresh `STORAGE_DEMO_ROOT` and Silver child, then set:
+Chọn `STORAGE_DEMO_ROOT` và nhánh Silver mới:
 
 ```bash
 export STORAGE_DEMO_ROOT="$PWD/data/storage_demo/classroom_rejection_01"
@@ -64,14 +63,14 @@ MOCK_RUN_REQUEST='{"samples_per_batch":20,"batches":2,"scenario":"invalid-value"
   python -m lakehouse_storage.ingestion_worker --create-run
 ```
 
-Expect MES accepted and sensor REJECTED at P3, with no sensor Silver write.
-`missing-field` is rejected by Bronze validation instead. Default behavior stops;
-`--skip-rejected` records the outcome and advances. Use `transient-500` to observe
-finite retry and `delay` with `MOCK_TIMEOUT_SECONDS` to demonstrate timeouts.
+MES được chấp nhận; sensor bị P3 từ chối (`REJECTED`), không ghi Silver sensor.
+Kịch bản `missing-field` bị chặn tại kiểm tra Bronze. Mặc định worker dừng;
+`--skip-rejected` ghi nhận kết quả rồi chuyển tiếp. `transient-500` minh họa retry
+hữu hạn; `delay` kết hợp `MOCK_TIMEOUT_SECONDS` minh họa timeout.
 
-## 4. Maintenance after ingestion has stopped
+## 4. Bảo trì sau khi dừng ingestion
 
-Restore the normal session before maintenance and tracing:
+Khôi phục cấu hình phiên nạp bình thường trước khi bảo trì và truy vết:
 
 ```bash
 export STORAGE_DEMO_ROOT="$PWD/data/storage_demo/classroom_01"
@@ -82,11 +81,11 @@ MAINTENANCE_ENABLED=true MAINTENANCE_INGESTION_STOPPED=true \
   python -m lakehouse_storage.maintenance_scheduler --once --action vacuum_preview
 ```
 
-Inspect `maintenance.jsonl`: version, active file count/bytes, timings and decisions.
-Preview does not delete files. Cooldown survives restart. The local guard covers
-only these demo entry points; external writers must remain stopped.
+Kiểm tra `maintenance.jsonl`: version, số file/dung lượng đang hoạt động, thời gian
+và quyết định. Vacuum preview không xóa file. Cooldown được giữ qua restart.
+Khóa local chỉ bảo vệ các entry point demo; phải dừng các writer bên ngoài.
 
-## 5. Trace all sources
+## 5. Truy vết mọi nguồn
 
 ```python
 import os
@@ -98,31 +97,31 @@ print(trace['integrity_verified'], len(trace['lineage_sources']))
 print(get_version_at_date(uri, '2026-12-01T00:00:00+07:00'))
 ```
 
-`lineage` preserves the representative source for old callers. `lineage_sources`
-contains all unique path/hash pairs. Tests corrupt a temporary second file and
-prove the overall integrity becomes false while preserving valid sources.
-For container Bronze paths, run trace inside the same worker image/mounts.
+`lineage` giữ nguồn đại diện cho caller cũ; `lineage_sources` chứa đủ cặp path/hash
+khác nhau. Test làm hỏng file nguồn thứ hai trong thư mục tạm để xác nhận integrity
+tổng chuyển thành false, đồng thời giữ kết quả nguồn hợp lệ. Với đường dẫn Bronze
+trong container, chạy trace trong cùng image và mount của worker.
 
-## 6. Benchmark and figures
+## 6. Benchmark và biểu đồ
 
-Run [storage_benchmark.md](storage_benchmark.md). Actual results and limitations
-are in [storage_results.md](storage_results.md). Regenerate figures:
+Chạy theo [Hướng dẫn benchmark](storage_benchmark.md); xem số đo và giới hạn tại
+[Kết quả thực nghiệm](storage_results.md). Tạo lại biểu đồ:
 
 ```bash
 python -m lakehouse_storage.benchmark_report reports/storage/RUN_ID/metrics.json
 ```
 
-Four charts cover active file count, file sizes, query latency with dispersion and
-end-to-end throughput. Raw JSON/CSV includes package versions, scale, seed,
-workload text and cache policy. The results do not claim compaction always helps.
+Bốn biểu đồ thể hiện số file hoạt động, phân bố kích thước, latency kèm độ phân tán
+và thông lượng toàn trình. JSON/CSV lưu phiên bản package, quy mô, seed, truy vấn
+và chính sách cache. Không kết luận compaction luôn làm truy vấn nhanh hơn.
 
-## Verification and limits
+## Kiểm chứng và giới hạn
 
-Single local POSIX worker/phase lock; no distributed exactly-once guarantee.
-PUBLISHING uncertainty and corrupt state require manual review. PROCESSING resume
-reuses Bronze and records the previous commit outcome as unknown. Local service
-output trees reject symlink escapes. Shared writers, destructive vacuum,
-production rollout and 1M-scale performance claims are outside this demo run.
+Chỉ một worker POSIX với khóa pha local; chưa bảo đảm exactly-once phân tán.
+`PUBLISHING` chưa rõ kết quả hoặc checkpoint hỏng cần kiểm tra thủ công.
+Resume `PROCESSING` dùng lại Bronze; kết quả commit trước đó có thể là unknown.
+Cây thư mục đầu ra chặn symlink vượt root. Writer dùng chung, vacuum xóa thật,
+triển khai production và kết luận hiệu năng quy mô 1M nằm ngoài demo này.
 
 ```bash
 STORAGE_DEMO_MINIO_TEST=1 PYTHONPATH=src /tmp/storage-services-venv/bin/python -m pytest tests/ -q -rs

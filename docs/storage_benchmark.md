@@ -1,9 +1,9 @@
-# Reproducing storage benchmarks
+# Hướng dẫn chạy lại benchmark storage
 
-Use the isolated service environment and start Docker MinIO/mock as described in
-[storage_operations.md](storage_operations.md). Stop demo ingestion before maintenance.
-The harness owns a separate namespace for each invocation and refuses existing
-work/report directories. It never vacuums and never uses shared factory tables.
+Chuẩn bị môi trường dịch vụ và MinIO/mock theo
+[Hướng dẫn vận hành](storage_operations.md). Dừng ingestion trước khi bảo trì.
+Mỗi lần chạy dùng namespace riêng; harness từ chối thư mục dữ liệu/báo cáo đã có,
+không chạy vacuum và không dùng bảng nhà máy dùng chung.
 
 ```bash
 STORAGE_DEMO_REVISION=$(git rev-parse HEAD) MINIO_ENDPOINT=127.0.0.1:19000 MINIO_ACCESS_KEY=storagedemo \
@@ -12,40 +12,52 @@ MINIO_SECRET_KEY=storage-demo-local-only PYTHONPATH=src \
   --rows 100000 --batch-sizes 1000,10000,50000 --seed 42 --warmups 1 --repeats 5
 ```
 
-The CLI generates a fresh run id by default; an explicit `--run-id` must be new. For local Delta use
+## Cấu hình
+
+CLI mặc định tạo mã lần chạy mới; `--run-id` chỉ nhận mã chưa tồn tại. Với Delta
+local, dùng
 `--allow-root "$PWD/data/storage_benchmark" --silver-root "$PWD/data/storage_benchmark/TARGET/silver"`
-and a distinct CLI run id. Never combine local and S3 results into a single speedup.
-Batch sizes must divide the scale, with <=50k samples/batch and <=200 batches/run.
-For 1M rows choose e.g. `5000,10000,50000`.
+và mã lần chạy riêng.
+Không gộp kết quả local và S3 để tính mức tăng tốc.
 
-Artifacts in `reports/storage/<run_id>`:
+Kích thước batch phải chia hết tổng số dòng; giới hạn 50k mẫu/batch và 200
+batch/run. Với 1M dòng, có thể chọn `5000,10000,50000`.
 
-- `metrics.json`: controls, environment, package/container limits, query semantics,
-  counts, fingerprints, before/after versions/file sizes, raw latencies, median,
-  IQR and standard deviation, stage durations and worker outcomes.
-- `queries.csv`: every timed repetition in seconds.
-- `operations.jsonl`: compaction decision, error and before/after evidence.
-- `command.json`: exact invocation; plotting adds PNG/SVG figures and summary.
+## Tệp kết quả
 
-The mock generates one seeded stream and slices it, so batch size does not change
-sensor values. Each run has a unique business batch id, excluded from the
-cross-configuration sensor fingerprint. All accepted business columns are compared
-between configurations. Baseline and compacted queries are checked for equal
-results before optimized latencies are recorded. Timing never gates pass/fail.
+Thư mục `reports/storage/<run_id>` gồm:
 
-End-to-end throughput includes HTTP fetch/JSON validation, Bronze publication,
-P3 validation, report/figure creation and Delta writes, including one MES row.
-Mock run generation (POST) is outside that timer. `p3_seconds` includes reporting;
-it is not a storage-only timer. Report input, accepted and rejected sensor counts.
-All query runs use at least one warmup and five timed repetitions. The OS/object
-cache is uncontrolled; call these warm workloads, not cold-cache tests. Layout
-order is baseline then compacted, workload order appears in `query_text`.
+| Tệp | Nội dung |
+|---|---|
+| `metrics.json` | Cấu hình, môi trường, giới hạn package/container, ngữ nghĩa truy vấn, số dòng, fingerprint, version/kích thước file trước-sau, latency thô, median, IQR, độ lệch chuẩn, thời gian từng bước và kết quả worker |
+| `queries.csv` | Từng lần đo truy vấn, đơn vị giây |
+| `operations.jsonl` | Quyết định compaction, lỗi và bằng chứng trước-sau |
+| `command.json` | Lệnh thực thi; bước vẽ bổ sung PNG/SVG và báo cáo tóm tắt |
 
-The workload is synthetic: one production line. The 100k-row stream spans two ingestion-date partitions
-under the existing P3 semantics.
-The batch lookup reads timestamp/uht_temp with a batch predicate; hourly and
-line/date aggregates provide separate workloads. There is no evidence here for
-multi-partition pruning speedup, real factory causality or a cross-format
-compression advantage. Z-order is opt-in in the maintenance runner and tested for
-correctness; this initial benchmark reports compaction only. S3 retained physical
-bytes are unknown. Active bytes are not reclaimed disk space.
+## Kiểm soát tính đúng
+
+Mock sinh một chuỗi dữ liệu theo seed rồi chia batch; thay batch size không làm
+đổi giá trị sensor. Mỗi run có batch ID nghiệp vụ riêng, được loại khỏi fingerprint
+so sánh giữa các cấu hình. So sánh toàn bộ cột nghiệp vụ được chấp nhận; chỉ ghi
+latency sau compaction khi kết quả truy vấn khớp với trước compaction. Tốc độ không
+phải điều kiện đạt/trượt.
+
+## Phạm vi đo
+
+Thông lượng toàn trình gồm HTTP, xác minh JSON, publish Bronze, kiểm định P3,
+tạo báo cáo/biểu đồ và ghi Delta, cộng một dòng MES. POST tạo run nằm ngoài khoảng
+đo. `p3_seconds` gồm thời gian báo cáo, không đại diện riêng thời gian ghi storage.
+Báo đủ số dòng sensor đầu vào, được chấp nhận và bị loại.
+
+Mỗi truy vấn có ít nhất 1 lần làm nóng và 5 lần đo. Không kiểm soát cache của OS
+hoặc object store, do đó không gọi đây là phép đo cold-cache. Đo trước rồi sau
+compaction; thứ tự workload nằm trong `query_text`.
+
+Dữ liệu giả lập có một dây chuyền; 100k dòng trải qua hai partition ngày theo
+ngữ nghĩa P3 hiện có. Tra cứu batch đọc timestamp/uht_temp theo điều kiện batch;
+tổng hợp theo giờ và theo dây chuyền/ngày là các workload riêng.
+
+Chưa có bằng chứng về tăng tốc nhờ pruning nhiều partition, quan hệ nhân quả
+nghiệp vụ hoặc lợi thế nén giữa định dạng. Runner có Z-order tùy chọn và đã kiểm
+tra tính đúng; benchmark này chỉ đo compaction. Dung lượng vật lý S3 còn giữ lại
+chưa xác định; giảm active bytes không đồng nghĩa giải phóng dung lượng đĩa.

@@ -1,20 +1,36 @@
-# Kết quả benchmark storage - 2026-11-17
+# Kết quả benchmark storage (2026-11-17)
 
-Đã đo 100.000 sensor rows trên MinIO demo, seed 42, batch size 1k/10k/50k. Mỗi cấu hình đều có 100.000 accepted, 0 rejected; fingerprint business giống nhau. Baseline và compacted giữ cùng kết quả truy vấn và schema. Không vacuum.
+Đã đo **100.000 dòng sensor** trên MinIO demo, seed 42, batch size 1k/10k/50k.
+Mỗi cấu hình chấp nhận 100.000 dòng, loại 0 dòng; fingerprint nghiệp vụ giống nhau.
+Trước/sau compaction giữ nguyên kết quả truy vấn và schema; không chạy vacuum.
 
-Source revision: `a6638ffb0d37e5e8cd3e0c506368c2c66da1e78c`. Máy: Intel(R) Core(TM) i7-8565U CPU @ 1.80GHz, 8 logical CPUs, 15.30 GiB RAM. Host Python 3.12.3; package versions và giới hạn quan sát được trong metrics. Compose không áp thêm CPU/RAM limit.
+Revision: `a6638ffb0d37e5e8cd3e0c506368c2c66da1e78c`. Máy Intel(R) Core(TM)
+i7-8565U CPU @ 1.80GHz, 8 CPU logic, 15.30 GiB RAM; Python host 3.12.3.
+Phiên bản package và giới hạn quan sát được nằm trong metrics. Compose không
+áp thêm giới hạn CPU/RAM.
 
-Nguồn số liệu cuối: [metrics.json](../reports/storage/measured_100k_20261117/metrics.json), [raw CSV](../reports/storage/measured_100k_20261117/queries.csv), [operation log](../reports/storage/measured_100k_20261117/operations.jsonl), [command](../reports/storage/measured_100k_20261117/command.json), [summary + 4 figures](../reports/storage/measured_100k_20261117/summary.md).
+Nguồn số liệu: [metrics](../reports/storage/measured_100k_20261117/metrics.json),
+[CSV thô](../reports/storage/measured_100k_20261117/queries.csv),
+[nhật ký bảo trì](../reports/storage/measured_100k_20261117/operations.jsonl),
+[lệnh chạy](../reports/storage/measured_100k_20261117/command.json),
+[tóm tắt và 4 biểu đồ](../reports/storage/measured_100k_20261117/summary.md).
 
-| Batch size | Files trước → sau | Pipeline (s) | Input rows/s | Compaction (s) |
+## Thông lượng nạp
+
+| Batch size | Số file trước → sau | Toàn trình (s) | Dòng đầu vào/s | Compaction (s) |
 |---:|---:|---:|---:|---:|
 | 1,000 | 101 → 2 | 68.13 | 1468 | 0.345 |
 | 10,000 | 11 → 2 | 13.24 | 7553 | 0.247 |
 | 50,000 | 3 → 2 | 10.88 | 9193 | 0.331 |
 
-Throughput là một lần nạp cho mỗi batch size: gồm HTTP fetch, xác minh JSON, Bronze, P3 validation/reporting/figures và Delta, cộng một MES row. POST tạo mock run nằm ngoài timer. Không coi thời gian P3 là storage-only; không có error bar cho throughput vì chưa lặp nhiều đợt ingestion.
+Mỗi batch size chỉ đo một đợt nạp: HTTP, xác minh JSON, Bronze, P3 kiểm định/báo
+cáo/biểu đồ và Delta, cộng một dòng MES. POST tạo mock run nằm ngoài thời gian đo.
+Thời gian P3 không phải thời gian riêng storage. Chưa lặp nhiều đợt ingestion,
+nên biểu đồ thông lượng không có thanh sai số.
 
-| Batch size | Workload | Baseline median / IQR (ms) | Compacted median / IQR (ms) |
+## Độ trễ truy vấn
+
+| Batch size | Workload | Median / IQR trước compaction (ms) | Median / IQR sau compaction (ms) |
 |---:|---|---:|---:|
 | 1,000 | line_date_aggregate | 51.95 / 5.97 | 27.99 / 0.43 |
 | 1,000 | batch_lookup | 56.24 / 0.60 | 32.60 / 2.19 |
@@ -26,15 +42,32 @@ Throughput là một lần nạp cho mỗi batch size: gồm HTTP fetch, xác mi
 | 50,000 | batch_lookup | 16.78 / 1.22 | 16.53 / 0.06 |
 | 50,000 | hourly_aggregate | 12.30 / 0.57 | 15.01 / 0.16 |
 
-Mỗi query/layout có 1 warmup + 5 timed repetitions; raw samples và standard deviation được giữ lại. Hình latency dùng median và SD, bảng trên dùng median và IQR. Chạy baseline rồi compacted; OS/object cache không kiểm soát, không gọi cold-cache. Đợt đo cuối chạy sau khi full test suite kết thúc để tránh tranh tài nguyên với tests.
+Mỗi truy vấn/layout có **1 lần làm nóng + 5 lần đo**; lưu mẫu thô và độ lệch chuẩn
+(SD). Biểu đồ dùng median và SD; bảng dùng median và khoảng tứ phân vị (IQR).
+Đo trước rồi sau compaction; không kiểm soát cache OS/object store nên không gọi
+là cold-cache. Đợt đo cuối chạy sau khi toàn bộ test kết thúc để tránh tranh tài nguyên.
 
-Compaction giúp rõ ở cấu hình nhiều file nhỏ. Với batch 50k, line/date và hourly aggregate chậm hơn sau compaction; batch lookup gần tương đương. Không đặt speedup làm điều kiện pass. Ít file hơn không bảo đảm query nhanh hơn ở quy mô nhỏ.
+Compaction cải thiện rõ cấu hình nhiều file nhỏ. Với batch 50k, tổng hợp theo
+dây chuyền/ngày và theo giờ chậm hơn; tra cứu batch gần tương đương. Tăng tốc
+không phải tiêu chí đạt: ít file hơn chưa bảo đảm truy vấn nhanh hơn ở quy mô nhỏ.
 
-Dữ liệu có một line, một business batch và hai ingestion dates theo semantics P3 hiện có. Batch lookup trong workload này đọc cả batch, chưa chứng minh lợi ích selective lookup/pruning trên nhiều batch. Không suy ra tác động nghiệp vụ, hiệu quả nhiều line hoặc compression giữa các định dạng.
+## Giới hạn kết quả
 
-Active bytes trước/sau được lưu riêng. S3 retained/physical bytes chưa đo, ghi null/unknown; không tuyên bố giải phóng disk vì Delta vẫn giữ file lịch sử. Z-order có test correctness ở runner nhưng chưa đo performance; 1M scale chưa chạy và không có kết luận về nó. 100k là scale thực nghiệm được chọn cho gói demo tối thiểu.
+Dữ liệu có một dây chuyền, một batch nghiệp vụ và hai ngày ingestion theo ngữ
+nghĩa P3 hiện có. `batch_lookup` đọc cả batch, chưa chứng minh lợi ích lọc chọn
+hoặc pruning nhiều batch. Không suy rộng sang nghiệp vụ, nhiều dây chuyền hoặc
+hiệu quả nén giữa định dạng.
 
-Các lần smoke/khảo sát đầu không gộp vào thống kê cuối. Một đợt đo sau review đã được dừng khi phát hiện trùng thời gian chạy tests; namespace đó được giữ để kiểm tra và không dùng trong báo cáo. Chỉ run `measured_100k_20261117` là nguồn các bảng/hình trên.
+Active bytes lưu riêng trước/sau; dung lượng vật lý S3 còn giữ lại chưa đo,
+ghi null/unknown. Delta giữ file lịch sử nên chưa thể kết luận đã giải phóng đĩa.
+Z-order có test tính đúng ở runner nhưng chưa đo hiệu năng. Quy mô 1M chưa chạy;
+100k là quy mô thực nghiệm được chọn cho demo tối thiểu.
+
+Chỉ run `measured_100k_20261117` cung cấp số liệu cuối. Không gộp các lần smoke
+hoặc khảo sát. Một lần đo sau review đã dừng vì chạy trùng thời gian với tests;
+namespace được giữ để kiểm tra và không dùng trong thống kê.
+
+## Chạy lại
 
 ```bash
 STORAGE_DEMO_REVISION=$(git rev-parse HEAD) MINIO_ENDPOINT=127.0.0.1:19000 \
