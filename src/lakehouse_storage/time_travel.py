@@ -73,8 +73,12 @@ def diff_versions(
             ['line_id', 'timestamp'], ['farm_id', 'observed_at'],
             ['source', 'product', 'contract', 'observed_at', 'currency', 'unit'],
             ['source', 'index_name', 'period_start'], ['source', 'recall_id'],
-            ['batch_id'], ['file'],
         ]
+        # A bare batch_id on an unknown frame does not identify a MES table.
+        if {'batch_id', 'line_id', 'sku_id'}.issubset(df_v1.columns):
+            silver_keys.append(['batch_id'])
+        if {'file', 'sha256'}.issubset(df_v1.columns):
+            silver_keys.append(['file'])
         for keys in silver_keys:
             if all(key in df_v1.columns and key in df_v2.columns for key in keys):
                 id_column = keys[0] if len(keys) == 1 else keys

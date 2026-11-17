@@ -67,3 +67,15 @@ def test_diff_same_key_updates_are_not_additions(tmp_path):
                         mode='overwrite', storage_options=get_storage_options())
     result = diff_versions(uri, 0, 1, 'id')
     assert result['counts']['added_count'] == result['counts']['removed_count'] == 0
+
+
+def test_unknown_shape_keeps_temporal_fallback_with_null_batch_id(tmp_path):
+    from lakehouse_storage.time_travel import diff_versions
+    uri = str(tmp_path / 'unknown')
+    frame = pl.DataFrame({'timestamp': [1, 2], 'batch_id': [None, None]},
+                         schema_overrides={'batch_id': pl.String})
+    write_deltalake(uri, frame.head(1).to_arrow(), storage_options=get_storage_options())
+    write_deltalake(uri, frame.tail(1).to_arrow(), mode='append', storage_options=get_storage_options())
+    result = diff_versions(uri, 0, 1)
+    assert result['id_column'] == 'timestamp'
+    assert result['counts']['added_count'] == 1
