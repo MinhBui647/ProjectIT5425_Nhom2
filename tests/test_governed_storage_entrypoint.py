@@ -63,3 +63,42 @@ def test_governed_infrastructure_failure_has_status(tmp_path, monkeypatch):
     result = process(path, tmp_path)
     assert result['status'] == 'FAIL' and result['error_category'] == 'infrastructure'
     assert result['rows_written'] == 0 and 'offline storage' in result['error']
+
+
+@pytest.mark.parametrize('module', ['mock_sensor_stream', 'generate_mes_data'])
+def test_generator_cli_writes_governed_gold_input(tmp_path, module):
+    import os
+    import subprocess
+    import sys
+    from olap_engineering.build_marts import scan_silver
+    args = ['--batches', '1', '--samples', '20', '--seed', '42'] if module == 'mock_sensor_stream' else [
+        '--days', '1', '--date', '2026-01-15', '--seed', '5425', '--defect-rate', '0', '--write-delta']
+    result = subprocess.run([
+        sys.executable, '-B', '-m', 'lakehouse_storage.' + module, *args,
+        '--bronze-root', str(tmp_path / 'bronze'), '--silver-root', str(tmp_path / 'silver'),
+        '--reports-root', str(tmp_path / 'reports'),
+    ], capture_output=True, text=True, timeout=90, env={**os.environ, 'PYTHONPATH': 'src'})
+    assert result.returncode == 0, (result.stdout, result.stderr)
+    tables = ['sensor_telemetry'] if module == 'mock_sensor_stream' else ['sensor_telemetry', 'mes_lims']
+    for table in tables:
+        frame = scan_silver(table, str(tmp_path / 'silver')).collect()
+        assert frame.height > 0
+        assert frame['_quality_run_id'].null_count() == 0
+
+
+@pytest.mark.parametrize('module', ['mock_sensor_stream', 'generate_mes_data'])
+def test_generator_cli_returns_failure_for_rejected_batch(tmp_path, monkeypatch, module):
+    import importlib
+    import sys
+    cli = importlib.import_module('lakehouse_storage.' + module)
+    raw = generate_sensor_batch(10, seed=42).with_columns(pl.lit(20.0).alias('uht_temp'))
+    if module == 'mock_sensor_stream':
+        monkeypatch.setattr(cli, 'generate_sensor_batch', lambda **kwargs: raw)
+        args = ['--batches', '1']
+    else:
+        monkeypatch.setattr(cli, 'generate_daily_production', lambda **kwargs: (raw, pl.DataFrame(), {}))
+        args = ['--days', '1', '--write-delta']
+    monkeypatch.setattr(sys, 'argv', [module, *args, '--bronze-root', str(tmp_path / 'bronze'),
+                        '--silver-root', str(tmp_path / 'silver'), '--reports-root', str(tmp_path / 'reports')])
+    assert cli.main() == 1
+    assert not (tmp_path / 'silver' / 'sensor_telemetry').exists()
