@@ -276,7 +276,7 @@ def ingest_multiple_files(
     does not abort the whole batch.
     """
     source_name = get_source_name(table_name)
-    root = Path(bronze_root) if bronze_root is not None else None
+    root = Path(bronze_root).resolve() if bronze_root is not None else None
     expected_dir = (root / source_name) if root is not None else None
 
     results = []

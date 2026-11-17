@@ -337,3 +337,42 @@ class TestReadBronzeFile:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+@pytest.mark.parametrize('absolute_input', [False, True])
+def test_verify_relative_root_matches_absolute_root(tmp_path, monkeypatch, absolute_input):
+    from lakehouse_storage.bronze_writer import ingest_multiple_files
+    monkeypatch.chdir(tmp_path)
+    root = Path('relative_bronze')
+    path = Path(write_bronze_batch(pl.DataFrame({'timestamp': ['2026-01-15']}),
+                                  'sensor_telemetry', root, validate_schema=False))
+    supplied = path.resolve() if absolute_input else path
+    relative = ingest_multiple_files('sensor_telemetry', [supplied], bronze_root=root)[0]
+    absolute = ingest_multiple_files('sensor_telemetry', [supplied], bronze_root=root.resolve())[0]
+    assert relative['verified'] is True
+    assert relative == absolute
+    assert relative['checksum'] == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert relative['size_bytes'] == path.stat().st_size
+
+
+def test_verify_mixed_relative_root_keeps_containment_and_checksums(tmp_path, monkeypatch):
+    from lakehouse_storage.bronze_writer import ingest_multiple_files
+    monkeypatch.chdir(tmp_path)
+    root = Path('relative_bronze')
+    frame = pl.DataFrame({'timestamp': ['2026-01-15']})
+    good = Path(write_bronze_batch(frame, 'sensor_telemetry', root, validate_schema=False))
+    wrong_source = Path(write_bronze_batch(frame, 'mes_lims', root, validate_schema=False))
+    outside = Path(write_bronze_batch(frame, 'sensor_telemetry', 'outside', validate_schema=False))
+    link = good.parent / 'escape.parquet'
+    link.symlink_to(outside.resolve())
+    bad = Path(write_bronze_batch(frame, 'sensor_telemetry', root, validate_schema=False))
+    bad.with_suffix('.sha256').write_text('0' * 64)
+    missing = Path(write_bronze_batch(frame, 'sensor_telemetry', root, validate_schema=False))
+    missing.with_suffix('.sha256').unlink()
+    paths = [good, wrong_source, root / '..' / outside, link, bad, missing]
+    results = ingest_multiple_files('sensor_telemetry', paths, bronze_root=root)
+    assert len(results) == len(paths)
+    assert [r['verified'] for r in results] == [True, False, False, False, False, False]
+    assert 'does not belong' in results[1]['error']
+    assert all('error' in results[i] for i in (2, 3))
+    assert verify_checksum(good)
