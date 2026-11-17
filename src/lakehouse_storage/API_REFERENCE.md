@@ -277,4 +277,29 @@ write. Existing tables must have `_contract_version`, `_quality_status`, and
 `_quality_run_id`; missing legacy metadata is reported without migration.
 Reports, figures and quarantine live below `reports_root`. Invalid paths/table
 arguments raise errors. No concurrent claim or transaction recovery is added.
-The demo worker's `process_file` namespace guard is unchanged.
+The demo worker's `process_file` continues to use the shared demo namespace guard.
+
+### Sửa 5 lỗi P1 trước PR (R01–R07, 2026-11-17)
+
+- **Phạm vi S3:** `require_namespace()` kiểm tra cả root/target theo bucket và
+  segment. URI demo dùng key literal; percent-encoding, dot segment, segment rỗng,
+  backslash, khoảng trắng, query/fragment bị từ chối trước thao tác backend.
+  Root trailing slash hợp lệ; target bằng root hoặc sibling prefix bị chặn.
+- **Checkpoint worker:** run lưu `target.json` với đích Silver chuẩn hóa;
+  checkpoint lưu `silver_uri` theo bảng. Đổi đích hoặc checkpoint legacy thiếu
+  đích gây `NeedsReview` trước skip/publish/replay; CLI khác 0. JSON và Bronze gốc
+  được giữ để xác minh. `run()` kiểm tra checkpoint hiện có trước side effect.
+  Resume cùng đích giữ luồng P3; đích mới dùng state root mới.
+- **Ngày Silver:** timestamp có timezone được chuyển về `TIMEZONE` (env
+  `FACTORY_TIMEZONE`, mặc định UTC) trước khi suy ra `ingestion_date`. Naive
+  Datetime được hiểu theo timezone cấu hình; ngày caller cung cấp được giữ.
+  Không tự repartition dữ liệu lịch sử.
+- **Xác minh Bronze:** `ingest_multiple_files(table_name, bronze_paths,
+  bronze_root=None)` chuẩn hóa root tương đối/tuyệt đối, giữ containment,
+  checksum và kết quả riêng từng file (`verified=False` kèm lỗi nếu cần).
+- **Ngày Bronze:** thử ISO, YMD, DMY rồi MDY; DMY có ưu tiên khi mơ hồ. Fallback
+  ngày UTC và dữ liệu raw giữ nguyên. Ví dụ `15/01/2026` và `01/15/2026` cùng
+  partition `2026-01-15`, còn `01/02/2026` vào `2026-02-01`.
+
+Không đổi chữ ký API storage công khai, schema hoặc partition keys. Các quy tắc
+trên áp dụng cho lần ghi/chạy mới; không tự migrate checkpoint hoặc bảng cũ.

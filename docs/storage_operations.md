@@ -4,6 +4,12 @@ Demo dùng một worker tuần tự trong namespace riêng. Khóa local không �
 writer bên ngoài hoặc bảo đảm exactly-once phân tán. Root local phải có thành phần
 `storage_demo` hoặc `storage_benchmark`; target ngoài allow-root bị từ chối.
 
+S3 dùng URI dạng literal trong namespace demo. Root và target phải cùng bucket,
+target là thư mục con theo từng segment. Guard từ chối percent-encoding (`%...`),
+`.`/`..`, segment rỗng, backslash, khoảng trắng, query và fragment để tránh Delta
+diễn giải đường dẫn khác sau kiểm tra. Dùng tên prefix đơn giản, ví dụ
+`s3://smart-dairy-storage-demo/storage_demo/run_01/silver`; không tự URL-encode URI.
+
 <a id="local-service-environment"></a>
 ## Môi trường dịch vụ local
 
@@ -171,6 +177,18 @@ vào loopback hoặc mạng Compose riêng.
 
 Checkpoint lưu ở `worker_state/<run>/<sequence>.json`. Worker xác minh checksum
 và dùng lại artifact đã biết. Checkpoint hỏng được giữ lại kèm `.review.json`.
+Run lưu đích Silver chuẩn hóa tại `worker_state/<run>/target.json`; từng
+checkpoint có `silver_uri`. Đích không đổi trong cùng run/state tree. Đổi
+`STORAGE_DEMO_SILVER_ROOT` rồi dùng lại state cũ gây `NeedsReview`, CLI khác 0,
+trước khi skip DONE hoặc ghi dữ liệu. Trở lại đúng đích cũ để resume/replay.
+
+Checkpoint legacy thiếu đích cũng cần xác minh, không được tự nhận đích đang
+cấu hình. Giữ nguyên JSON, Bronze và `.review.json` để đối chiếu với lịch sử P3
+và Delta; hiện chưa có công cụ tự migrate checkpoint. Không sửa DONE theo suy
+đoán hoặc xóa checkpoint để ép retry. Khi chủ đích nạp vào đích mới, dùng
+`STORAGE_DEMO_ROOT` mới thuộc namespace demo với cùng mock/run ID; đây là lần
+nạp độc lập qua P3, không phải chuyển tiếp DONE cũ.
+
 Crash tại `PUBLISHING` chuyển `NEEDS_REVIEW` và liệt kê artifact liên quan: kiểm
 tra thủ công trước khi đổi state; không tự xóa orphan hoặc retry publish.
 Resume `PROCESSING` dùng lại Bronze và duplicate gate P3; commit trước đó có thể
@@ -250,6 +268,23 @@ Ghi Silver có tên bảng kiểm tra cột bắt buộc, null và ép kiểu tr
 không tự migrate nullable metadata cũ. Diff dùng khóa thực thể, báo lỗi khi khóa
 null/trùng. Với bảng chưa nhận diện, truyền `id_column` rõ ràng (string/list/tuple).
 Update cùng khóa không được tính là thêm/xóa.
+
+### Quy tắc ngày và đường dẫn sau R01–R07
+
+Silver chuyển timestamp có timezone về `FACTORY_TIMEZONE` (mặc định UTC) trước
+khi suy ra `ingestion_date`. Cùng instant dạng String hoặc Datetime cho cùng ngày
+partition; naive Datetime được hiểu theo timezone cấu hình. Ví dụ mặc định:
+`2026-01-16 01:00+07` thuộc `2026-01-15` UTC. Ngày caller truyền sẵn được giữ;
+không tự sửa partition của bảng lịch sử.
+
+Bronze root tương đối/tuyệt đối đều được kiểm containment và source directory
+trên đường dẫn đã resolve; path thoát root, nguồn sai và checksum sai vẫn bị chặn.
+Parser ngày thử ISO trước, rồi YMD, DMY, MDY. `01/02/2026` được hiểu là ngày
+1 tháng 2; ngày không parse được vẫn dùng ngày UTC hiện tại. Raw Parquet giữ
+nguyên giá trị đầu vào, không chuẩn hóa chuỗi ngày trong Bronze.
+
+Bằng chứng R01–R07 được lưu cục bộ tại `reports/storage/pr_fixes_20261117/`;
+đối chiếu với báo cáo review ban đầu tại `reports/storage/review_20261117/`.
 
 Chạy lại kiểm thử S3 riêng:
 
