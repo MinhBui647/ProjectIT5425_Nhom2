@@ -111,3 +111,83 @@ def test_s3_strict_diff_trace_and_history(s3_demo):
     assert all(verify_checksum(path) for path in (first, second))
     print({'endpoint': core_config.MINIO_ENDPOINT, 'isolated_uri': uri,
            'rows': after.height, 'version': DeltaTable(uri, storage_options=core_config.get_storage_options()).version()})
+
+
+def test_s3_encoded_escape_cannot_compact_outside_allow_root(s3_demo):
+    from deltalake import DeltaTable, write_deltalake
+    from lakehouse_storage.service_config import require_namespace
+    from lakehouse_storage.time_travel import load_version
+    root, remote = s3_demo
+    allowed = remote + '/allowed'
+    escaped = remote + '/escaped/table'
+    options = core_config.get_storage_options()
+    for value in (1, 2):
+        write_deltalake(escaped, pl.DataFrame({'id': [value]}).to_arrow(),
+                        mode='append', storage_options=options)
+    before = DeltaTable(escaped, storage_options=options)
+    version, files = before.version(), sorted(before.file_uris())
+    rows = pl.read_delta(escaped, storage_options=options).sort('id')
+    for segment in ('%2E%2E', '%2e%2e', '.%2e', '%252e%252e'):
+        attack = allowed + '/' + segment + '/escaped/table'
+        with pytest.raises(ValueError):
+            require_namespace(attack, allowed)
+        with pytest.raises(ValueError):
+            MaintenancePolicy(attack, allowed, file_count_threshold=2)
+    after = DeltaTable(escaped, storage_options=options)
+    assert after.version() == version and sorted(after.file_uris()) == files
+    assert rows.equals(pl.read_delta(escaped, storage_options=options).sort('id'))
+    result = MaintenanceRunner(root / 'namespace_maintenance.jsonl').run(
+        MaintenancePolicy(escaped, remote, file_count_threshold=2),
+        enabled=True, ingestion_stopped=True)
+    assert result['decision'] == 'RUN', result
+    assert rows.equals(pl.read_delta(escaped, storage_options=options).sort('id'))
+    assert load_version(escaped, 0).height == 1
+    print({'case': 'namespace', 'uri': escaped, 'blocked_version': version,
+           'compacted_version': DeltaTable(escaped, storage_options=options).version(),
+           'rows': rows.height})
+
+
+def test_s3_checkpoint_target_change_fails_closed(s3_demo):
+    from deltalake import DeltaTable
+    from deltalake.exceptions import TableNotFoundError
+    from lakehouse_storage.worker_state import NeedsReview
+    root, remote = s3_demo
+    options = core_config.get_storage_options()
+    with mock_http(root) as (url, _):
+        run = requests.post(url + '/runs', json={'samples_per_batch': 10, 'batches': 1}, timeout=5).json()
+        worker = IngestionWorker(ServiceConfig(root, remote + '/a', remote, url), MockClient(url))
+        assert all(r['status'] == 'DONE' for r in worker.run(run['run_id']))
+        uri = remote + '/a/sensor_telemetry'
+        before = pl.read_delta(uri, storage_options=options).sort('timestamp')
+        checkpoint = worker.state.path(run['run_id'], 1).read_bytes()
+        changed = IngestionWorker(ServiceConfig(root, remote + '/b', remote, url), MockClient(url))
+        with pytest.raises(NeedsReview, match='target'):
+            changed.run(run['run_id'])
+        with pytest.raises(TableNotFoundError):
+            DeltaTable(remote + '/b/sensor_telemetry', storage_options=options)
+        assert worker.state.path(run['run_id'], 1).read_bytes() == checkpoint
+        assert before.equals(pl.read_delta(uri, storage_options=options).sort('timestamp'))
+        assert DeltaTable(uri, storage_options=options).version() == 0
+        assert worker.run(run['run_id']) == []
+        assert worker.process(run['run_id'], 1, replay=True)['p3_result']['status'] == 'SKIPPED_DUPLICATE'
+        print({'case': 'checkpoint_target', 'uri': uri, 'rows': before.height, 'blocked_target': remote + '/b'})
+
+
+def test_s3_timestamp_input_types_have_same_partition(s3_demo):
+    from datetime import date, datetime
+    from lakehouse_storage.silver_manager import append_to_delta, read_silver_table
+    _, remote = s3_demo
+    string = pl.DataFrame({'timestamp': ['2026-01-16T01:00:00+07:00'],
+                           'line_id': ['LINE_UHT_1'], 'uht_temp': [140.0]})
+    typed = string.with_columns(pl.col('timestamp').str.to_datetime(time_zone='Asia/Ho_Chi_Minh'))
+    results = []
+    for name, frame in [('string', string), ('typed', typed)]:
+        uri = remote + '/' + name + '/sensor_telemetry'
+        append_to_delta(frame, uri, ['line_id', 'ingestion_date'], 'sensor_telemetry')
+        result = read_silver_table(uri, date_from='2026-01-15', date_to='2026-01-15')
+        assert result.height == 1
+        assert result['timestamp'][0] == datetime.fromisoformat('2026-01-15T18:00:00+00:00')
+        assert result['ingestion_date'][0] == date(2026, 1, 15)
+        results.append(result.select('timestamp', 'ingestion_date'))
+    assert results[0].equals(results[1])
+    print({'case': 'timezone', 'prefix': remote, 'ingestion_date': '2026-01-15'})
