@@ -24,10 +24,22 @@ def sensor():
 
 @pytest.mark.parametrize('entry', ['append', 'ingest'])
 @pytest.mark.parametrize('invalid', ['missing', 'null', 'timestamp'])
-def test_strict_rejection_preserves_snapshot(tmp_path, entry, invalid):
+@pytest.mark.parametrize('existing', ['new', 'legacy_nullable'])
+def test_strict_rejection_preserves_snapshot(tmp_path, entry, invalid, existing):
     from lakehouse_storage.bronze_writer import write_bronze_batch
     uri = str(tmp_path / 'silver')
-    append_to_delta(sensor(), uri, ['line_id', 'ingestion_date'], 'sensor_telemetry')
+    initial = sensor()
+    if entry == 'ingest':
+        initial = initial.with_columns(pl.lit('initial.parquet').alias('_bronze_file'),
+                                       pl.lit('initial_hash').alias('_bronze_sha256'))
+    if existing == 'new':
+        append_to_delta(initial, uri, ['line_id', 'ingestion_date'], 'sensor_telemetry')
+    else:
+        table = _cast_to_schema(_to_silver_frame(initial, 'sensor_telemetry').to_arrow(),
+                                get_silver_schema('sensor_telemetry'), strict=True)
+        nullable = pa.table({name: table[name] for name in table.column_names})
+        write_deltalake(uri, nullable, partition_by=['line_id', 'ingestion_date'],
+                        storage_options=get_storage_options())
     before = read_silver_table(uri)
     bad = sensor()
     if invalid == 'missing':

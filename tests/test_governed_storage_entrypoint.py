@@ -1,6 +1,4 @@
 """The public governed path uses P3 results without bypassing its gate."""
-from pathlib import Path
-
 import polars as pl
 import pytest
 

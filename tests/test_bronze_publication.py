@@ -65,7 +65,6 @@ def test_failures_do_not_expose_incomplete_parquet(tmp_path, monkeypatch, bounda
         raise OSError('injected publication failure')
 
     if boundary == 'serialize':
-        original = pl.DataFrame.write_parquet
         def partial(self, path, *args, **kwargs):
             Path(path).write_bytes(b'partial parquet')
             fail()
@@ -120,3 +119,18 @@ def test_legacy_pair_is_readable(tmp_path):
     bronze._write_checksum(path)
     assert bronze.verify_checksum(path)
     assert bronze.read_bronze_file(path, tmp_path).equals(sensor())
+
+
+def test_publication_cannot_replace_file_created_after_reservation(tmp_path, monkeypatch):
+    link = os.link
+    conflicting = []
+    def concurrent_file(src, dst, *args, **kwargs):
+        path = Path(dst)
+        if path.suffix == '.parquet':
+            path.write_bytes(b'concurrent original')
+            conflicting.append(path)
+        return link(src, dst, *args, **kwargs)
+    monkeypatch.setattr(os, 'link', concurrent_file)
+    with pytest.raises(FileExistsError):
+        bronze.write_bronze_batch(sensor(), 'sensor_telemetry', tmp_path)
+    assert conflicting[0].read_bytes() == b'concurrent original'
