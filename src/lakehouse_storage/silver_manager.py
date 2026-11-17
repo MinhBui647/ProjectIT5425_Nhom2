@@ -255,7 +255,7 @@ def _to_silver_frame(df: pl.DataFrame, table_name: str | None) -> pl.DataFrame:
             if ts_dtype == pl.String:
                 df = df.with_columns(
                     pl.col(ts_col)
-                    .str.to_datetime(strict=False, time_zone=TIMEZONE)
+                    .str.to_datetime(strict=True, time_zone=TIMEZONE)
                     .alias(ts_col)
                 )
             elif ts_dtype == pl.Datetime and df.schema[ts_col].time_zone is None:
@@ -303,8 +303,8 @@ def _cast_to_schema(
     Args:
         table: Source Arrow table.
         schema: Target schema.
-        strict: When True, raise if a non-nullable business column cannot be
-            cast, preventing silent schema drift in the Silver layer.
+        strict: Reject missing required columns, null required values and any
+            failed cast, including nullable business columns.
     """
     target_names = set(schema.names)
     cols = {}
@@ -313,9 +313,10 @@ def _cast_to_schema(
             try:
                 cols[field.name] = table.column(field.name).cast(field.type)
             except Exception as e:
-                if strict and not field.nullable:
+                if strict:
+                    kind = "non-nullable " if not field.nullable else ""
                     raise ValueError(
-                        f"Failed to cast non-nullable column '{field.name}' "
+                        f"Failed to cast {kind}column '{field.name}' "
                         f"to {field.type}: {e}"
                     ) from e
                 logger.warning(
@@ -325,6 +326,8 @@ def _cast_to_schema(
                     e,
                 )
                 cols[field.name] = table.column(field.name)
+            if strict and not field.nullable and cols[field.name].null_count:
+                raise ValueError(f"Null values in non-nullable column '{field.name}'")
         elif field.nullable:
             # Keep the Arrow batch compatible with an already-created Delta
             # contract when a newly introduced optional Silver column is not
@@ -337,7 +340,15 @@ def _cast_to_schema(
     for name in table.column_names:
         if name not in target_names:
             cols[name] = table.column(name)
-    return pa.table(cols)
+    # Construct with fields, since pa.table(dict) makes every field nullable.
+    fields = [
+        field if strict else pa.field(field.name, cols[field.name].type)
+        for field in schema if field.name in cols
+    ]
+    fields.extend(field for field in table.schema if field.name not in target_names)
+    return pa.Table.from_arrays(
+        [cols[field.name] for field in fields], schema=pa.schema(fields)
+    )
 
 
 def create_delta_table(
