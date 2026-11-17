@@ -21,6 +21,7 @@ Tables:
 """
 
 from lakehouse_storage import config
+from lakehouse_storage.governance_adapter import ingest_governed_bronze_file
 from lakehouse_storage.schemas import (
     # Schemas
     SENSOR_TELEMETRY_SCHEMA,
@@ -126,6 +127,7 @@ from lakehouse_storage.generate_mes_data import (
 )
 
 __all__ = [
+    "ingest_governed_bronze_file",
     # Config
     "config",
     # Schemas
