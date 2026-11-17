@@ -52,7 +52,7 @@ def diff_versions(
     table_uri: str,
     v1: int,
     v2: int,
-    id_column: str | None = None,
+    id_column: str | list[str] | tuple[str, ...] | None = None,
 ) -> dict:
     """Compare two versions and return differences.
 
@@ -60,36 +60,50 @@ def diff_versions(
         table_uri: S3 URI of the Delta table
         v1: First version number
         v2: Second version number
-        id_column: Primary key column (auto-detected if not provided)
+        id_column: Entity key column(s), auto-detected from Silver columns.
+            Null or duplicate keys raise ValueError. Updates sharing a key are
+            not reported as additions/removals.
     """
     df_v1 = load_version(table_uri, v1)
     df_v2 = load_version(table_uri, v2)
 
-    # Auto-detect ID column if not provided. Prefer temporal keys and skip
-    # columns that are entirely NULL (e.g. batch_id before MES backfill).
+    # Use Silver entity identities rather than raw Bronze registry keys.
     if id_column is None:
-        candidates = [
-            "timestamp", "observed_at", "period_start",
-            "batch_id", "recall_id", "file",
+        silver_keys = [
+            ['line_id', 'timestamp'], ['farm_id', 'observed_at'],
+            ['source', 'product', 'contract', 'observed_at', 'currency', 'unit'],
+            ['source', 'index_name', 'period_start'], ['source', 'recall_id'],
+            ['batch_id'], ['file'],
         ]
-        for col in candidates:
-            if col in df_v1.columns and df_v1[col].null_count() < df_v1.height:
-                id_column = col
+        for keys in silver_keys:
+            if all(key in df_v1.columns and key in df_v2.columns for key in keys):
+                id_column = keys[0] if len(keys) == 1 else keys
                 break
         else:
+            candidates = ['timestamp', 'observed_at', 'period_start', 'batch_id', 'recall_id', 'file']
+            candidates += [col for col in df_v1.columns if col not in candidates]
             id_column = next(
-                (c for c in df_v1.columns if df_v1[c].null_count() < df_v1.height),
-                df_v1.columns[0],
+                (col for col in candidates if col in df_v1.columns and
+                 df_v1[col].null_count() < df_v1.height),
+                df_v1.columns[0] if df_v1.columns else None,
             )
+            logger.warning('Unknown Silver shape; pass id_column explicitly (fallback: %s)', id_column)
 
-    if id_column not in df_v1.columns:
-        raise ValueError(f"ID column '{id_column}' not found in table")
+    keys = [id_column] if isinstance(id_column, str) else list(id_column or [])
+    if not keys or any(not isinstance(key, str) for key in keys) or len(set(keys)) != len(keys):
+        raise ValueError('Key columns must be a non-empty sequence of distinct names')
+    for version, frame in ((v1, df_v1), (v2, df_v2)):
+        missing = [key for key in keys if key not in frame.columns]
+        if missing:
+            raise ValueError(f'Key columns not found in version {version}: {missing}')
+        key_frame = frame.select(keys)
+        if any(key_frame.null_count().row(0)):
+            raise ValueError(f'Null key values in version {version}: {keys}')
+        if key_frame.is_duplicated().any():
+            raise ValueError(f'Duplicate key values in version {version}: {keys}')
 
-    v1_ids = set(df_v1.select(id_column).to_series().to_list())
-    v2_ids = set(df_v2.select(id_column).to_series().to_list())
-
-    added = df_v2.filter(~pl.col(id_column).is_in(v1_ids))
-    removed = df_v1.filter(~pl.col(id_column).is_in(v2_ids))
+    added = df_v2.join(df_v1.select(keys), on=keys, how='anti', maintain_order='left')
+    removed = df_v1.join(df_v2.select(keys), on=keys, how='anti', maintain_order='left')
 
     return {
         "added": added,
