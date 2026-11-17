@@ -12,3 +12,16 @@ def test_invalid_policy(tmp_path, changes):
 def test_shared_table_rejected():
     with pytest.raises(ValueError):
         MaintenancePolicy('s3://smart-dairy-lakehouse/02_silver_curated/sensor_telemetry', 's3://smart-dairy-lakehouse/02_silver_curated')
+
+
+def test_encoded_escape_rejected_by_policy_and_worker(tmp_path):
+    from lakehouse_storage.ingestion_worker import IngestionWorker
+    from lakehouse_storage.service_config import ServiceConfig
+    root = 's3://smart-dairy-storage-demo/storage_demo/allowed'
+    escaped = root + '/%2E%2E/escaped/table'
+    with pytest.raises(ValueError):
+        MaintenancePolicy(escaped, root)
+    config = ServiceConfig(tmp_path / 'storage_demo', escaped, root, 'http://unused')
+    with pytest.raises(ValueError):
+        IngestionWorker(config, object())
+    assert not list(tmp_path.rglob('*.json'))

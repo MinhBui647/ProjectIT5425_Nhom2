@@ -55,3 +55,38 @@ def test_done_without_p3_evidence_is_corrupt(tmp_path):
               'durations':{},'bronze_path':'/some/path.parquet','bronze_sha256':'b'*64,'payload_sha256':'c'*64}
     state.save(record)
     with pytest.raises(NeedsReview): state.load('a'*32,1)
+
+
+@pytest.mark.parametrize('suffix', [
+    '%2E%2E/escaped/table', '%2e%2e/escaped/table', '.%2e/escaped/table',
+    '%252e%252e/escaped/table', '%2f../escaped/table', '%5c../escaped/table',
+    'safe/../table', 'safe/./table', 'safe//table', 'table?x=1', 'table#fragment',
+    'bad%/table', 'bad%GG/table', 'table\\other', 'table\nother',
+])
+def test_s3_namespace_rejects_ambiguous_uri(suffix):
+    from lakehouse_storage.service_config import require_namespace
+    root = 's3://smart-dairy-storage-demo/storage_demo/allowed'
+    with pytest.raises(ValueError):
+        require_namespace(root + '/' + suffix, root)
+
+
+@pytest.mark.parametrize('root', [
+    's3://smart-dairy-storage-demo/storage_demo/%2e%2e/allowed',
+    's3://smart-dairy-storage-demo/storage_demo/../allowed',
+    's3://smart-dairy-storage-demo/storage_demo//allowed',
+])
+def test_s3_namespace_validates_root_too(root):
+    from lakehouse_storage.service_config import require_namespace
+    with pytest.raises(ValueError):
+        require_namespace(root + '/table', root)
+
+
+def test_s3_namespace_compares_bucket_and_segments():
+    from lakehouse_storage.service_config import require_namespace
+    root = 's3://smart-dairy-storage-demo/storage_demo/allowed'
+    target = root + '/sensor_telemetry'
+    assert require_namespace(target, root + '/') == target
+    for invalid in [root, root + '_sibling/table', target.replace('s3:', 'https:'),
+                    target.replace('smart-dairy-storage-demo', 'other-bucket')]:
+        with pytest.raises(ValueError):
+            require_namespace(invalid, root)

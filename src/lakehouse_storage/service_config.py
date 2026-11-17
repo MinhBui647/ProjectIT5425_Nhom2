@@ -5,19 +5,31 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 
+def _s3_parts(uri):
+    # Demo URIs use literal keys. Reject encoding rather than let the backend
+    # decode/normalize a different path after the namespace check.
+    if any(c.isspace() or ord(c) < 32 or ord(c) == 127 for c in uri) or '%' in uri or '\\' in uri:
+        raise ValueError('ambiguous demo S3 URI')
+    parsed = urlsplit(uri)
+    if (parsed.scheme != 's3' or not parsed.netloc or parsed.query or parsed.fragment
+            or '@' in parsed.netloc or ':' in parsed.netloc or '?' in uri or '#' in uri):
+        raise ValueError('invalid demo S3 URI')
+    parts = parsed.path.removeprefix('/').removesuffix('/').split('/') if parsed.path.strip('/') else []
+    if any(p in {'', '.', '..'} for p in parts) or '//' in parsed.path:
+        raise ValueError('relative or empty URI segments forbidden')
+    return parsed.netloc, parts
+
+
 def require_namespace(target, root):
     """Allow only descendants of an explicitly isolated demo/benchmark root."""
     target, root = str(target), str(root)
     if root.startswith('s3://'):
-        parsed = urlsplit(root)
-        if parsed.scheme != 's3' or not parsed.netloc or parsed.query or parsed.fragment:
-            raise ValueError('invalid demo S3 root')
-        parts = [parsed.netloc, *parsed.path.split('/')]
-        if not any(p in {'storage_demo', 'storage_benchmark', 'smart-dairy-storage-demo'} for p in parts):
+        bucket, root_parts = _s3_parts(root)
+        target_bucket, target_parts = _s3_parts(target)
+        if not any(p in {'storage_demo', 'storage_benchmark', 'smart-dairy-storage-demo'} for p in [bucket, *root_parts]):
             raise ValueError('root must identify a demo namespace')
-        if any(p in {'.', '..'} for p in urlsplit(target).path.split('/')):
-            raise ValueError('relative URI segments forbidden')
-        if not target.startswith(root.rstrip('/') + '/'):
+        if (target_bucket != bucket or len(target_parts) <= len(root_parts)
+                or target_parts[:len(root_parts)] != root_parts):
             raise ValueError('target outside demo namespace')
     else:
         allowed = Path(root).resolve()
