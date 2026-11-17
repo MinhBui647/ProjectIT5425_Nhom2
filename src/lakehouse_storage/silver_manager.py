@@ -262,6 +262,11 @@ def _to_silver_frame(df: pl.DataFrame, table_name: str | None) -> pl.DataFrame:
                 df = df.with_columns(
                     pl.col(ts_col).dt.replace_time_zone(TIMEZONE).alias(ts_col)
                 )
+            elif ts_dtype == pl.Datetime:
+                # Derive partition dates in the same timezone as stored timestamps.
+                df = df.with_columns(
+                    pl.col(ts_col).dt.convert_time_zone(TIMEZONE).alias(ts_col)
+                )
 
     # Parse date columns (market_indices uses date32)
     if table_name == "market_indices" and "period_start" in df.columns:

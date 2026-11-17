@@ -93,3 +93,46 @@ def test_valid_append_to_existing_schema(tmp_path, initial):
     if initial != 'legacy':
         assert not schema.field('line_id').nullable
 
+
+
+@pytest.mark.parametrize('entry', ['append', 'ingest'])
+@pytest.mark.parametrize(('zone', 'text', 'utc_text'), [
+    ('Asia/Ho_Chi_Minh', '2026-01-16T01:00:00+07:00', '2026-01-15T18:00:00+00:00'),
+    ('America/New_York', '2026-01-14T23:00:00-05:00', '2026-01-15T04:00:00+00:00'),
+])
+def test_partition_date_matches_same_instant_across_input_types(tmp_path, entry, zone, text, utc_text):
+    from datetime import date
+    from lakehouse_storage.bronze_writer import write_bronze_batch
+    frames = [sensor().with_columns(pl.lit(text).alias('timestamp'))]
+    frames.append(frames[0].with_columns(pl.col('timestamp').str.to_datetime(time_zone=zone)))
+    results = []
+    for index, frame in enumerate(frames):
+        uri = str(tmp_path / f'silver_{index}')
+        if entry == 'append':
+            append_to_delta(frame, uri, ['line_id', 'ingestion_date'], 'sensor_telemetry')
+        else:
+            path = write_bronze_batch(frame, 'sensor_telemetry', tmp_path / 'bronze', validate_schema=False)
+            ingest_bronze_file(path, uri, ['line_id', 'ingestion_date'], 'sensor_telemetry')
+        result = read_silver_table(uri, date_from='2026-01-15', date_to='2026-01-15')
+        assert result.height == 1
+        assert result['timestamp'][0] == datetime.fromisoformat(utc_text)
+        assert result['ingestion_date'][0] == date(2026, 1, 15)
+        results.append(result.select('timestamp', 'ingestion_date'))
+    assert results[0].equals(results[1])
+
+
+def test_partition_conversion_respects_factory_timezone_and_explicit_date(monkeypatch):
+    from datetime import date
+    from lakehouse_storage import silver_manager
+    monkeypatch.setattr(silver_manager, 'TIMEZONE', 'Asia/Ho_Chi_Minh')
+    frames = [sensor().with_columns(pl.lit('2026-01-15T18:00:00Z').alias('timestamp'))]
+    frames.append(frames[0].with_columns(pl.col('timestamp').str.to_datetime(time_zone='UTC')))
+    frames.append(sensor().with_columns(pl.lit(datetime(2026, 1, 16, 1)).alias('timestamp')))
+    for frame in frames:
+        transformed = _to_silver_frame(frame, 'sensor_telemetry')
+        assert transformed['ingestion_date'][0] == date(2026, 1, 16)
+        assert transformed.schema['timestamp'].time_zone == 'Asia/Ho_Chi_Minh'
+        supplied = frame.with_columns(pl.lit(date(2025, 12, 31)).alias('ingestion_date'))
+        assert _to_silver_frame(supplied, 'sensor_telemetry')['ingestion_date'][0] == date(2025, 12, 31)
+    date_frame = pl.DataFrame({'period_start': [date(2026, 1, 1)]})
+    assert _to_silver_frame(date_frame, 'market_indices')['ingestion_date'][0] == date(2026, 1, 1)
