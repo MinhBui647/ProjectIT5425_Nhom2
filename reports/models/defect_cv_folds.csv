@@ -1,0 +1,7 @@
+﻿sample,fold,n_train,n_test,defects_train,defects_test,converged,separation_warning
+240_lo_cluster,0,160,80,8,4,True,False
+240_lo_cluster,1,160,80,8,4,True,False
+240_lo_cluster,2,160,80,8,4,True,False
+63_lo_doc_lap,0,42,21,2,1,True,False
+63_lo_doc_lap,1,42,21,2,1,True,False
+63_lo_doc_lap,2,42,21,2,1,True,False

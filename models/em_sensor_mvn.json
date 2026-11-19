@@ -1,0 +1,459 @@
+{
+  "model": "EM cho N(µ, Σ) với dữ liệu khuyết (NumPy thuần)",
+  "variables": [
+    "uht_temp",
+    "preheat_temp",
+    "homo_press_stage1",
+    "homo_press_stage2",
+    "flow_rate",
+    "conductivity",
+    "power_kw"
+  ],
+  "data": "trung bình theo phút từng lô, G fact_sensor_telemetry, năm 2025",
+  "final_fit": {
+    "rows": 28800,
+    "missing_cells_in_gold": 0,
+    "n_iter": 2,
+    "note": "µ, Σ bàn giao học trên toàn bộ dữ liệu phút sau khi đã validate."
+  },
+  "mu_hat_original": {
+    "uht_temp": 140.0095447450214,
+    "preheat_temp": 80.00905955182182,
+    "homo_press_stage1": 180.00297891563838,
+    "homo_press_stage2": 40.0101108845075,
+    "flow_rate": 5000.184950849745,
+    "conductivity": 4.800741663806968,
+    "power_kw": 75.00453243626488
+  },
+  "sigma_hat_original": [
+    [
+      0.019611782391769365,
+      0.008648448575892111,
+      0.008545197262780139,
+      0.008969776761296254,
+      0.051872784084957047,
+      0.0008905390449308061,
+      0.008653632274411424
+    ],
+    [
+      0.008648448575892111,
+      0.012904889500734562,
+      0.009518551485335492,
+      0.00889432247632189,
+      0.07975643806605474,
+      0.0008655245984865938,
+      0.009290077458236687
+    ],
+    [
+      0.008545197262780139,
+      0.009518551485335492,
+      0.15602732668728772,
+      0.009796766802239044,
+      0.057641501098819,
+      0.0009223122504595743,
+      0.007064969363884333
+    ],
+    [
+      0.008969776761296254,
+      0.00889432247632189,
+      0.009796766802239044,
+      0.025664934054910122,
+      0.0735464499137653,
+      0.000876308495484122,
+      0.008930688779288019
+    ],
+    [
+      0.051872784084957047,
+      0.07975643806605474,
+      0.057641501098819,
+      0.0735464499137653,
+      107.3743871480782,
+      0.006956126328909672,
+      0.07547271552375547
+    ],
+    [
+      0.0008905390449308061,
+      0.0008655245984865938,
+      0.0009223122504595743,
+      0.000876308495484122,
+      0.006956126328909672,
+      0.0002609182163610089,
+      0.0009663385975904054
+    ],
+    [
+      0.008653632274411424,
+      0.009290077458236687,
+      0.007064969363884333,
+      0.008930688779288019,
+      0.07547271552375547,
+      0.0009663385975904054,
+      0.07636557802882113
+    ]
+  ],
+  "zscore": {
+    "mean": {
+      "uht_temp": 140.0095447450214,
+      "preheat_temp": 80.00905955182182,
+      "homo_press_stage1": 180.00297891563838,
+      "homo_press_stage2": 40.0101108845075,
+      "flow_rate": 5000.184950849745,
+      "conductivity": 4.800741663806968,
+      "power_kw": 75.00453243626488
+    },
+    "sd": {
+      "uht_temp": 0.14004207364849042,
+      "preheat_temp": 0.11359968970351254,
+      "homo_press_stage1": 0.3950029451628006,
+      "homo_press_stage2": 0.16020279040925092,
+      "flow_rate": 10.362161316447335,
+      "conductivity": 0.016152963083007708,
+      "power_kw": 0.27634322504599557
+    }
+  },
+  "mu_hat_z": {
+    "uht_temp": -3.45801666622335e-14,
+    "preheat_temp": -5.439294076876106e-14,
+    "homo_press_stage1": 3.525935908984164e-14,
+    "homo_press_stage2": -2.7560631246339696e-15,
+    "flow_rate": -2.706116002578381e-14,
+    "conductivity": 1.6927493357638608e-14,
+    "power_kw": 1.6000752035067516e-14
+  },
+  "sigma_hat_z": [
+    [
+      1.0000000000000075,
+      0.5436288913875584,
+      0.15447678635705023,
+      0.3998094226424061,
+      0.03574626543452398,
+      0.39367898480938146,
+      0.22360992804922472
+    ],
+    [
+      0.5436288913875584,
+      1.0000000000000178,
+      0.21212574688343921,
+      0.4887262318180734,
+      0.06775451735326377,
+      0.47168283220641044,
+      0.29593298055095235
+    ],
+    [
+      0.15447678635705023,
+      0.21212574688343921,
+      1.000000000000008,
+      0.15481475874140788,
+      0.01408265692657266,
+      0.14455244533408265,
+      0.06472337082863491
+    ],
+    [
+      0.3998094226424061,
+      0.4887262318180734,
+      0.15481475874140788,
+      0.99999999999999,
+      0.04430383171862171,
+      0.33863726287408913,
+      0.20172794161222585
+    ],
+    [
+      0.03574626543452398,
+      0.06775451735326377,
+      0.01408265692657266,
+      0.04430383171862171,
+      1.000000000000006,
+      0.04155898297265532,
+      0.026356686176713502
+    ],
+    [
+      0.39367898480938146,
+      0.47168283220641044,
+      0.14455244533408265,
+      0.33863726287408913,
+      0.04155898297265532,
+      0.9999999999999962,
+      0.2164852464250876
+    ],
+    [
+      0.22360992804922472,
+      0.29593298055095235,
+      0.06472337082863491,
+      0.20172794161222585,
+      0.026356686176713502,
+      0.2164852464250876,
+      0.9999999999999918
+    ]
+  ],
+  "validation": {
+    "split": {
+      "by": "batch_key",
+      "valid_fraction": 0.2,
+      "n_batches_train": 192,
+      "n_batches_valid": 48,
+      "n_rows_train": 3000,
+      "n_rows_valid": 5760,
+      "batch_overlap": 0
+    },
+    "missing_cells": {
+      "train": 2140,
+      "valid_mcar": 4127,
+      "valid_mat_tin_hieu": 1203
+    },
+    "rmse_zscore_total": {
+      "train": {
+        "EM": 0.9203566019979108,
+        "trung_binh": 1.017886070477001,
+        "giam_rmse_pct": 9.581570207890355,
+        "noi_suy_thoi_gian": null,
+        "so_o_bi_xoa": 2140,
+        "mo_ta": "train (MCAR 10 %)"
+      },
+      "valid_mcar": {
+        "EM": 0.8984915444903009,
+        "trung_binh": 1.0357675718320247,
+        "giam_rmse_pct": 13.253555244920001,
+        "noi_suy_thoi_gian": 1.0695810043148204,
+        "so_o_bi_xoa": 4127,
+        "mo_ta": "valid, MCAR 10 %"
+      },
+      "valid_mat_tin_hieu": {
+        "EM": 0.8903363024205929,
+        "trung_binh": 1.0721934294152748,
+        "giam_rmse_pct": 16.96122378719094,
+        "noi_suy_thoi_gian": 1.0557230656315746,
+        "so_o_bi_xoa": 1203,
+        "mo_ta": "valid, mỗi lô 2 cảm biến mất liền 10–15 phút"
+      }
+    },
+    "rmse_zscore": [
+      {
+        "bien": "uht_temp",
+        "tap": "train",
+        "so_o_bi_xoa": 298,
+        "EM": 0.8275999265,
+        "trung_binh": 1.0053883801,
+        "giam_rmse_pct": 17.6835596234,
+        "noi_suy_thoi_gian": null
+      },
+      {
+        "bien": "preheat_temp",
+        "tap": "train",
+        "so_o_bi_xoa": 289,
+        "EM": 0.7867375128,
+        "trung_binh": 1.013536469,
+        "giam_rmse_pct": 22.3769901795,
+        "noi_suy_thoi_gian": null
+      },
+      {
+        "bien": "homo_press_stage1",
+        "tap": "train",
+        "so_o_bi_xoa": 300,
+        "EM": 0.9568812228,
+        "trung_binh": 0.9973191666,
+        "giam_rmse_pct": 4.0546642636,
+        "noi_suy_thoi_gian": null
+      },
+      {
+        "bien": "homo_press_stage2",
+        "tap": "train",
+        "so_o_bi_xoa": 333,
+        "EM": 0.9016781909,
+        "trung_binh": 0.9767867898,
+        "giam_rmse_pct": 7.689354489,
+        "noi_suy_thoi_gian": null
+      },
+      {
+        "bien": "flow_rate",
+        "tap": "train",
+        "so_o_bi_xoa": 302,
+        "EM": 1.0245512236,
+        "trung_binh": 1.0293047717,
+        "giam_rmse_pct": 0.4618212403,
+        "noi_suy_thoi_gian": null
+      },
+      {
+        "bien": "conductivity",
+        "tap": "train",
+        "so_o_bi_xoa": 318,
+        "EM": 0.8504289552,
+        "trung_binh": 0.9975271206,
+        "giam_rmse_pct": 14.7462823187,
+        "noi_suy_thoi_gian": null
+      },
+      {
+        "bien": "power_kw",
+        "tap": "train",
+        "so_o_bi_xoa": 300,
+        "EM": 1.0603368143,
+        "trung_binh": 1.105498547,
+        "giam_rmse_pct": 4.0851915027,
+        "noi_suy_thoi_gian": null
+      },
+      {
+        "bien": "TOAN_BO",
+        "tap": "train",
+        "so_o_bi_xoa": 2140,
+        "EM": 0.920356602,
+        "trung_binh": 1.0178860705,
+        "giam_rmse_pct": 9.5815702079,
+        "noi_suy_thoi_gian": null
+      },
+      {
+        "bien": "uht_temp",
+        "tap": "valid_mcar",
+        "so_o_bi_xoa": 590,
+        "EM": 0.8665403667,
+        "trung_binh": 1.0528943229,
+        "giam_rmse_pct": 17.6992079973,
+        "noi_suy_thoi_gian": 0.9129982658
+      },
+      {
+        "bien": "preheat_temp",
+        "tap": "valid_mcar",
+        "so_o_bi_xoa": 587,
+        "EM": 0.7294156891,
+        "trung_binh": 1.112654808,
+        "giam_rmse_pct": 34.4436671795,
+        "noi_suy_thoi_gian": 0.7304465659
+      },
+      {
+        "bien": "homo_press_stage1",
+        "tap": "valid_mcar",
+        "so_o_bi_xoa": 586,
+        "EM": 0.9538766097,
+        "trung_binh": 0.9764662508,
+        "giam_rmse_pct": 2.3134072563,
+        "noi_suy_thoi_gian": 1.184060101
+      },
+      {
+        "bien": "homo_press_stage2",
+        "tap": "valid_mcar",
+        "so_o_bi_xoa": 604,
+        "EM": 0.8457713185,
+        "trung_binh": 1.0279916451,
+        "giam_rmse_pct": 17.7258567723,
+        "noi_suy_thoi_gian": 0.9883964107
+      },
+      {
+        "bien": "flow_rate",
+        "tap": "valid_mcar",
+        "so_o_bi_xoa": 599,
+        "EM": 1.0189381595,
+        "trung_binh": 1.0197719399,
+        "giam_rmse_pct": 0.0817614621,
+        "noi_suy_thoi_gian": 1.2895547059
+      },
+      {
+        "bien": "conductivity",
+        "tap": "valid_mcar",
+        "so_o_bi_xoa": 567,
+        "EM": 0.8473586642,
+        "trung_binh": 1.010973348,
+        "giam_rmse_pct": 16.1838770604,
+        "noi_suy_thoi_gian": 1.0287189063
+      },
+      {
+        "bien": "power_kw",
+        "tap": "valid_mcar",
+        "so_o_bi_xoa": 594,
+        "EM": 0.989905708,
+        "trung_binh": 1.0438772086,
+        "giam_rmse_pct": 5.1702920686,
+        "noi_suy_thoi_gian": 1.2367313458
+      },
+      {
+        "bien": "TOAN_BO",
+        "tap": "valid_mcar",
+        "so_o_bi_xoa": 4127,
+        "EM": 0.8984915445,
+        "trung_binh": 1.0357675718,
+        "giam_rmse_pct": 13.2535552449,
+        "noi_suy_thoi_gian": 1.0695810043
+      },
+      {
+        "bien": "uht_temp",
+        "tap": "valid_mat_tin_hieu",
+        "so_o_bi_xoa": 228,
+        "EM": 0.8766244663,
+        "trung_binh": 1.1291593041,
+        "giam_rmse_pct": 22.36485471,
+        "noi_suy_thoi_gian": 0.9386489113
+      },
+      {
+        "bien": "preheat_temp",
+        "tap": "valid_mat_tin_hieu",
+        "so_o_bi_xoa": 245,
+        "EM": 0.7373323418,
+        "trung_binh": 1.1018639933,
+        "giam_rmse_pct": 33.0831802996,
+        "noi_suy_thoi_gian": 0.737873175
+      },
+      {
+        "bien": "homo_press_stage1",
+        "tap": "valid_mat_tin_hieu",
+        "so_o_bi_xoa": 76,
+        "EM": 1.0347295954,
+        "trung_binh": 1.115770195,
+        "giam_rmse_pct": 7.2631980993,
+        "noi_suy_thoi_gian": 1.2759751671
+      },
+      {
+        "bien": "homo_press_stage2",
+        "tap": "valid_mat_tin_hieu",
+        "so_o_bi_xoa": 147,
+        "EM": 0.7792792102,
+        "trung_binh": 0.8905952474,
+        "giam_rmse_pct": 12.499060327,
+        "noi_suy_thoi_gian": 1.0729935219
+      },
+      {
+        "bien": "flow_rate",
+        "tap": "valid_mat_tin_hieu",
+        "so_o_bi_xoa": 160,
+        "EM": 0.9769298863,
+        "trung_binh": 0.9924118434,
+        "giam_rmse_pct": 1.5600334892,
+        "noi_suy_thoi_gian": 1.2347003414
+      },
+      {
+        "bien": "conductivity",
+        "tap": "valid_mat_tin_hieu",
+        "so_o_bi_xoa": 83,
+        "EM": 0.8597501982,
+        "trung_binh": 1.2554412875,
+        "giam_rmse_pct": 31.5180879639,
+        "noi_suy_thoi_gian": 0.9074936477
+      },
+      {
+        "bien": "power_kw",
+        "tap": "valid_mat_tin_hieu",
+        "so_o_bi_xoa": 264,
+        "EM": 0.9933773987,
+        "trung_binh": 1.0574436295,
+        "giam_rmse_pct": 6.0585953659,
+        "noi_suy_thoi_gian": 1.2328818727
+      },
+      {
+        "bien": "TOAN_BO",
+        "tap": "valid_mat_tin_hieu",
+        "so_o_bi_xoa": 1203,
+        "EM": 0.8903363024,
+        "trung_binh": 1.0721934294,
+        "giam_rmse_pct": 16.9612237872,
+        "noi_suy_thoi_gian": 1.0557230656
+      }
+    ],
+    "n_iter_train": 6,
+    "loglik_monotone": true,
+    "loglik_first_last": [
+      -26761.180736240112,
+      -25491.206198120417
+    ],
+    "param_error_vs_full_train": {
+      "max_abs_mu_em_vs_full_train": 0.009551001757048958,
+      "max_abs_sigma_em_vs_full_train": 0.02282951516062126,
+      "max_abs_sigma_meanimpute_vs_full_train": 0.12212452325308054
+    }
+  },
+  "usage": "statistical_models.em_missing.conditional_impute(X, mu, sigma): x_m = µ_m + Σ_mo Σ_oo⁻¹ (x_o − µ_o), dùng µ, Σ đơn vị gốc ở trên."
+}

@@ -1,0 +1,576 @@
+{
+  "model": "yield_recovery_pct ~ thông số công nghệ + chất lượng sữa + thời tiết + thị trường",
+  "target": "yield_recovery_pct",
+  "features": [
+    "protein_in",
+    "acidity_sh",
+    "uht_temp_std",
+    "uht_temp_min",
+    "uht_temp_max",
+    "flow_rate_avg",
+    "n_anomalies",
+    "homo_press1_avg",
+    "day_of_week",
+    "humidity_avg_pct",
+    "thi_index",
+    "is_heat_stress",
+    "gdt_smp_usd"
+  ],
+  "dropped_features": [],
+  "data": {
+    "source": "G batch_features.parquet (+ homo_press1_avg gộp từ G fact_sensor_telemetry)",
+    "scope": "lô năm 2025, n_readings > 0",
+    "n_batches": 240,
+    "n_groups": 63,
+    "n_defect_batches": 12,
+    "n_defect_groups": 3,
+    "group_size_counts": {
+      "1": 2,
+      "2": 2,
+      "3": 2,
+      "4": 57
+    }
+  },
+  "ols_independent": {
+    "n": 63,
+    "r2": 0.10586687815485107,
+    "r2_adj": -0.13135211335508656,
+    "mse": 4.990334766834919,
+    "r2_cv_groupkfold": -0.6228045420844612,
+    "r2_cv_sd": 0.13636671539730794,
+    "mse_cv_groupkfold": 9.057194872089998,
+    "coefficients": [
+      {
+        "term": "const",
+        "coef": 1540.7296724071,
+        "std_err": 1642.2633866076,
+        "stat": 0.9381745248,
+        "p_value": 0.3527563036,
+        "ci_low": -1759.5221621635,
+        "ci_high": 4840.9815069777,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "protein_in",
+        "coef": 3.402954875,
+        "std_err": 8.632555554,
+        "stat": 0.3942001709,
+        "p_value": 0.6951436812,
+        "ci_low": -13.9448149996,
+        "ci_high": 20.7507247495,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "acidity_sh",
+        "coef": 2.0503059963,
+        "std_err": 1.8756214382,
+        "stat": 1.0931342299,
+        "p_value": 0.2796800223,
+        "ci_low": -1.7188964,
+        "ci_high": 5.8195083927,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "uht_temp_std",
+        "coef": 22.3817508737,
+        "std_err": 50.7210130833,
+        "stat": 0.4412717632,
+        "p_value": 0.6609573483,
+        "ci_low": -79.5459410207,
+        "ci_high": 124.309442768,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "uht_temp_min",
+        "coef": -0.859658677,
+        "std_err": 1.3743765632,
+        "stat": -0.625489913,
+        "p_value": 0.5345520822,
+        "ci_low": -3.6215717849,
+        "ci_high": 1.902254431,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "uht_temp_max",
+        "coef": 1.4434137788,
+        "std_err": 1.5506478922,
+        "stat": 0.9308456072,
+        "p_value": 0.3564970785,
+        "ci_low": -1.6727298269,
+        "ci_high": 4.5595573845,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "flow_rate_avg",
+        "coef": -0.3184725413,
+        "std_err": 0.3864718047,
+        "stat": -0.8240511661,
+        "p_value": 0.4139036829,
+        "ci_low": -1.0951167099,
+        "ci_high": 0.4581716272,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "n_anomalies",
+        "coef": -0.0085495121,
+        "std_err": 0.0211034934,
+        "stat": -0.4051230711,
+        "p_value": 0.6871503929,
+        "ci_low": -0.0509585698,
+        "ci_high": 0.0338595457,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "homo_press1_avg",
+        "coef": 0.18578857,
+        "std_err": 4.1739316593,
+        "stat": 0.0445116464,
+        "p_value": 0.9646774727,
+        "ci_low": -8.2020411339,
+        "ci_high": 8.5736182739,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "day_of_week",
+        "coef": -0.0573655438,
+        "std_err": 0.1933443573,
+        "stat": -0.2967014118,
+        "p_value": 0.7679485327,
+        "ci_low": -0.4459055764,
+        "ci_high": 0.3311744889,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "humidity_avg_pct",
+        "coef": 0.0477480031,
+        "std_err": 0.0479126988,
+        "stat": 0.9965625863,
+        "p_value": 0.3238729121,
+        "ci_low": -0.0485361701,
+        "ci_high": 0.1440321762,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "thi_index",
+        "coef": 0.0074738133,
+        "std_err": 0.0780574605,
+        "stat": 0.0957475842,
+        "p_value": 0.924111565,
+        "ci_low": -0.1493885265,
+        "ci_high": 0.164336153,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "is_heat_stress",
+        "coef": 0.1167796182,
+        "std_err": 1.6005300929,
+        "stat": 0.0729630881,
+        "p_value": 0.9421325175,
+        "ci_low": -3.0996060228,
+        "ci_high": 3.3331652591,
+        "cov_type": "nonrobust"
+      },
+      {
+        "term": "gdt_smp_usd",
+        "coef": -0.0073641765,
+        "std_err": 0.0065436207,
+        "stat": -1.1253978334,
+        "p_value": 0.2659027531,
+        "ci_low": -0.0205140745,
+        "ci_high": 0.0057857215,
+        "cov_type": "nonrobust"
+      }
+    ]
+  },
+  "ols_cluster": {
+    "n": 240,
+    "r2": 0.0969230779513649,
+    "cov_type": "cluster theo group_id",
+    "coefficients": [
+      {
+        "term": "const",
+        "coef": 1007.7702153965,
+        "std_err": 1404.8673012637,
+        "stat": 0.7173419258,
+        "p_value": 0.4731631437,
+        "ci_low": -1745.7190981384,
+        "ci_high": 3761.2595289314,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "protein_in",
+        "coef": 2.3312081826,
+        "std_err": 7.0755020932,
+        "stat": 0.3294760078,
+        "p_value": 0.7417959256,
+        "ci_low": -11.5365210927,
+        "ci_high": 16.1989374578,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "acidity_sh",
+        "coef": 2.1438366382,
+        "std_err": 1.5546719492,
+        "stat": 1.3789639926,
+        "p_value": 0.167905856,
+        "ci_low": -0.9032643899,
+        "ci_high": 5.1909376663,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "uht_temp_std",
+        "coef": 25.2847014473,
+        "std_err": 44.1308369337,
+        "stat": 0.5729486047,
+        "p_value": 0.5666794935,
+        "ci_low": -61.2101495504,
+        "ci_high": 111.7795524451,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "uht_temp_min",
+        "coef": -0.9528968391,
+        "std_err": 1.2366259667,
+        "stat": -0.7705618876,
+        "p_value": 0.440966659,
+        "ci_low": -3.3766391962,
+        "ci_high": 1.4708455179,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "uht_temp_max",
+        "coef": 1.3626482325,
+        "std_err": 1.3429018676,
+        "stat": 1.0147042501,
+        "p_value": 0.3102468276,
+        "ci_low": -1.2693910627,
+        "ci_high": 3.9946875278,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "flow_rate_avg",
+        "coef": -0.2094179088,
+        "std_err": 0.314411182,
+        "stat": -0.666063807,
+        "p_value": 0.5053703171,
+        "ci_low": -0.8256525018,
+        "ci_high": 0.4068166842,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "n_anomalies",
+        "coef": -0.0085657723,
+        "std_err": 0.0185348092,
+        "stat": -0.4621451557,
+        "p_value": 0.64397723,
+        "ci_low": -0.0448933307,
+        "ci_high": 0.0277617862,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "homo_press1_avg",
+        "coef": 0.2562284121,
+        "std_err": 3.6698137185,
+        "stat": 0.06982055,
+        "p_value": 0.9443364906,
+        "ci_low": -6.9364743062,
+        "ci_high": 7.4489311304,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "day_of_week",
+        "coef": 0.0223209397,
+        "std_err": 0.0753370989,
+        "stat": 0.2962808507,
+        "p_value": 0.7670156087,
+        "ci_low": -0.1253370608,
+        "ci_high": 0.1699789403,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "humidity_avg_pct",
+        "coef": 0.009307902,
+        "std_err": 0.0274246121,
+        "stat": 0.3393995853,
+        "p_value": 0.734308731,
+        "ci_low": -0.0444433501,
+        "ci_high": 0.0630591541,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "thi_index",
+        "coef": 0.0103335184,
+        "std_err": 0.0614304667,
+        "stat": 0.1682148773,
+        "p_value": 0.8664142373,
+        "ci_low": -0.1100679838,
+        "ci_high": 0.1307350206,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "is_heat_stress",
+        "coef": -0.2713825753,
+        "std_err": 1.333913203,
+        "stat": -0.2034484513,
+        "p_value": 0.8387845329,
+        "ci_low": -2.8858044117,
+        "ci_high": 2.343039261,
+        "cov_type": "cluster"
+      },
+      {
+        "term": "gdt_smp_usd",
+        "coef": -0.0064826832,
+        "std_err": 0.0059751275,
+        "stat": -1.0849447431,
+        "p_value": 0.2779461295,
+        "ci_low": -0.0181937179,
+        "ci_high": 0.0052283515,
+        "cov_type": "cluster"
+      }
+    ]
+  },
+  "elasticnet": {
+    "n": 240,
+    "alpha": 3.599045653108868,
+    "l1_ratio": 0.1,
+    "intercept": 94.60567022959391,
+    "r2_in_sample": 0.0,
+    "mse_in_sample": 5.795579878636632,
+    "r2_cv_nested_groupkfold": -0.05731104504340254,
+    "r2_cv_sd": 0.026049814970319128,
+    "mse_cv_nested_groupkfold": 6.127730618113814,
+    "mse_cv_sd": 0.15097378348418855,
+    "cv_repeats": 5,
+    "coefficients": [
+      {
+        "term": "protein_in",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 3.2016090304,
+        "feature_sd": 0.0428933181,
+        "selected": false
+      },
+      {
+        "term": "acidity_sh",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 6.4815409621,
+        "feature_sd": 0.1949223555,
+        "selected": false
+      },
+      {
+        "term": "uht_temp_std",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 0.7997456091,
+        "feature_sd": 0.0073389004,
+        "selected": false
+      },
+      {
+        "term": "uht_temp_min",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 136.9786023458,
+        "feature_sd": 0.2589338805,
+        "selected": false
+      },
+      {
+        "term": "uht_temp_max",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 143.0207727432,
+        "feature_sd": 0.2424764833,
+        "selected": false
+      },
+      {
+        "term": "flow_rate_avg",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 5000.184946696,
+        "feature_sd": 1.1616818017,
+        "selected": false
+      },
+      {
+        "term": "n_anomalies",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 210.9333333333,
+        "feature_sd": 16.7333167331,
+        "selected": false
+      },
+      {
+        "term": "homo_press1_avg",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 180.0029781342,
+        "feature_sd": 0.1038586538,
+        "selected": false
+      },
+      {
+        "term": "day_of_week",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 4.0333333333,
+        "feature_sd": 1.957606248,
+        "selected": false
+      },
+      {
+        "term": "humidity_avg_pct",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 80.8711091836,
+        "feature_sd": 9.3038246116,
+        "selected": false
+      },
+      {
+        "term": "thi_index",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 67.6924859524,
+        "feature_sd": 7.3225814775,
+        "selected": false
+      },
+      {
+        "term": "is_heat_stress",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 0.1916666667,
+        "feature_sd": 0.3936121893,
+        "selected": false
+      },
+      {
+        "term": "gdt_smp_usd",
+        "coef_standardized": 0.0,
+        "coef_raw_unit": 0.0,
+        "feature_mean": 2743.0666666667,
+        "feature_sd": 57.3166254725,
+        "selected": false
+      }
+    ],
+    "n_selected": 0
+  },
+  "residual_diagnostics": [
+    {
+      "model": "OLS_63_doc_lap",
+      "n": 63,
+      "k": 13,
+      "r2": 0.1058668782,
+      "r2_adj": -0.1313521134,
+      "f_pvalue": 0.9432422087,
+      "aic": 308.0589438723,
+      "bic": 338.0628300417,
+      "mse": 4.9903347668,
+      "rmse": 2.2339057202,
+      "jarque_bera": 0.5195455361,
+      "jarque_bera_p": 0.7712268133,
+      "skew": -0.2218001524,
+      "kurtosis": 2.9662231061,
+      "shapiro_w": 0.9879746699,
+      "shapiro_p": 0.7979586627,
+      "breusch_pagan_lm": 14.3805044583,
+      "breusch_pagan_p": 0.3476030984,
+      "durbin_watson": 2.1717153629,
+      "condition_number": 29399405.16737765,
+      "fitted_min": 92.9005256498,
+      "fitted_max": 96.1052066494
+    },
+    {
+      "model": "OLS_240_cluster_group_id",
+      "n": 240,
+      "k": 13,
+      "r2": 0.096923078,
+      "r2_adj": 0.0449761754,
+      "f_pvalue": 0.8378440983,
+      "aic": 1106.32601424,
+      "bic": 1155.0549591667,
+      "mse": 5.2338544383,
+      "rmse": 2.2877618841,
+      "jarque_bera": 5.1692538512,
+      "jarque_bera_p": 0.0754242132,
+      "skew": -0.3398396539,
+      "kurtosis": 3.2344385288,
+      "shapiro_w": 0.9838624996,
+      "shapiro_p": 0.0079722073,
+      "breusch_pagan_lm": 33.0200299994,
+      "breusch_pagan_p": 0.0016922378,
+      "durbin_watson": 2.2235144704,
+      "condition_number": 28203812.139454797,
+      "fitted_min": 92.7870049564,
+      "fitted_max": 96.2079635859
+    }
+  ],
+  "cv_scores": [
+    {
+      "model": "OLS",
+      "n": 63,
+      "cv": "63 lô độc lập, GroupKFold",
+      "r2_in_sample": 0.1058668782,
+      "mse_in_sample": 4.9903347668,
+      "r2_cv": -0.6228045421,
+      "r2_cv_sd": 0.1363667154,
+      "mse_cv": 9.0571948721,
+      "mse_cv_sd": 0.7610897575,
+      "rmse_cv": 3.0074171342,
+      "n_repeats": 5,
+      "var_y": 5.5811988673
+    },
+    {
+      "model": "OLS",
+      "n": 240,
+      "cv": "240 lô, GroupKFold theo group_id",
+      "r2_in_sample": 0.096923078,
+      "mse_in_sample": 5.2338544383,
+      "r2_cv": -0.5202908767,
+      "r2_cv_sd": 0.1441901506,
+      "mse_cv": 8.8109672149,
+      "mse_cv_sd": 0.8356655358,
+      "rmse_cv": 2.9657210031,
+      "n_repeats": 5,
+      "var_y": 5.7955798786
+    },
+    {
+      "model": "ElasticNet",
+      "n": 63,
+      "cv": "63 lô độc lập, GroupKFold lồng nhau",
+      "r2_in_sample": null,
+      "mse_in_sample": null,
+      "r2_cv": -0.062121917,
+      "r2_cv_sd": 0.0307951507,
+      "mse_cv": 5.9279136402,
+      "mse_cv_sd": 0.1718738602,
+      "rmse_cv": 2.4345252367,
+      "n_repeats": 5,
+      "var_y": 5.5811988673
+    },
+    {
+      "model": "ElasticNet",
+      "n": 240,
+      "cv": "240 lô, GroupKFold lồng nhau theo group_id",
+      "r2_in_sample": 0.0,
+      "mse_in_sample": 5.7955798786,
+      "r2_cv": -0.057311045,
+      "r2_cv_sd": 0.026049815,
+      "mse_cv": 6.1277306181,
+      "mse_cv_sd": 0.1509737835,
+      "rmse_cv": 2.4752752191,
+      "n_repeats": 5,
+      "var_y": 5.7955798786
+    },
+    {
+      "model": "ElasticNet",
+      "n": 240,
+      "cv": "240 lô, KFold thường (RÒ RỈ, chỉ để so sánh)",
+      "r2_in_sample": 0.0,
+      "mse_in_sample": 5.7955798786,
+      "r2_cv": -0.0061572206,
+      "r2_cv_sd": 0.0246095854,
+      "mse_cv": 5.8312645425,
+      "mse_cv_sd": 0.1426268181,
+      "rmse_cv": 2.4146586022,
+      "n_repeats": 5,
+      "var_y": 5.7955798786
+    }
+  ],
+  "joblib": "models/yield_model.joblib (Pipeline: median impute -> StandardScaler -> ElasticNet)",
+  "interpretation": "R² thấp và R² kiểm định chéo ≈ 0 hoặc âm: các biến công nghệ/thời tiết không giải thích được tỷ lệ thu hồi. Đúng với bộ sinh dữ liệu (generate_mes_data.py): yield chỉ phụ thuộc cờ lỗi (95 ± 2 nếu đạt, 88 ± 3 nếu lỗi)."
+}

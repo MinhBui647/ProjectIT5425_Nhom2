@@ -1,0 +1,206 @@
+{
+  "bai1_yield": {
+    "features": [
+      "protein_in",
+      "acidity_sh",
+      "uht_temp_std",
+      "uht_temp_min",
+      "uht_temp_max",
+      "flow_rate_avg",
+      "n_anomalies",
+      "homo_press1_avg",
+      "day_of_week",
+      "humidity_avg_pct",
+      "thi_index",
+      "is_heat_stress",
+      "gdt_smp_usd"
+    ],
+    "dropped": [],
+    "r2_ols_doc_lap": 0.10586687815485107,
+    "r2_ols_cluster": 0.0969230779513649,
+    "cv": {
+      "OLS_63_group": {
+        "r2_cv": -0.6228,
+        "r2_cv_sd": 0.1364,
+        "mse_cv": 9.0572
+      },
+      "OLS_240_group": {
+        "r2_cv": -0.5203,
+        "r2_cv_sd": 0.1442,
+        "mse_cv": 8.811
+      },
+      "ElasticNet_63_group": {
+        "r2_cv": -0.0621,
+        "r2_cv_sd": 0.0308,
+        "mse_cv": 5.9279
+      },
+      "ElasticNet_240_group": {
+        "r2_cv": -0.0573,
+        "r2_cv_sd": 0.026,
+        "mse_cv": 6.1277
+      },
+      "ElasticNet_240_kfold": {
+        "r2_cv": -0.0062,
+        "r2_cv_sd": 0.0246,
+        "mse_cv": 5.8313
+      }
+    },
+    "mse_elasticnet_trong_mau": 5.795579878636632,
+    "elasticnet": {
+      "alpha": 3.599045653108868,
+      "l1_ratio": 0.1,
+      "so_bien_giu_lai": 0
+    }
+  },
+  "bai2_defect": {
+    "features": [
+      "uht_temp_min",
+      "flow_rate_avg"
+    ],
+    "metrics": [
+      {
+        "sample": "240_lo_cluster",
+        "scope": "in_sample",
+        "auc": 0.8625730994,
+        "auc_cv_mean": null,
+        "auc_cv_sd": null,
+        "threshold_youden": 0.0869887261,
+        "sensitivity": 1.0,
+        "specificity": 0.850877193,
+        "hl_p_value": 7.19e-08
+      },
+      {
+        "sample": "240_lo_cluster",
+        "scope": "oof_stratified_group_kfold",
+        "auc": 0.8157894737,
+        "auc_cv_mean": 0.8403508772,
+        "auc_cv_sd": 0.0204260225,
+        "threshold_youden": 0.0485330216,
+        "sensitivity": 1.0,
+        "specificity": 0.7105263158,
+        "hl_p_value": 0.000125872
+      },
+      {
+        "sample": "63_lo_doc_lap",
+        "scope": "in_sample",
+        "auc": 0.8722222222,
+        "auc_cv_mean": null,
+        "auc_cv_sd": null,
+        "threshold_youden": 0.0793576791,
+        "sensitivity": 1.0,
+        "specificity": 0.85,
+        "hl_p_value": 0.1214904932
+      },
+      {
+        "sample": "63_lo_doc_lap",
+        "scope": "oof_stratified_group_kfold",
+        "auc": 0.8722222222,
+        "auc_cv_mean": 0.8455555556,
+        "auc_cv_sd": 0.0177430216,
+        "threshold_youden": 0.0608208836,
+        "sensitivity": 1.0,
+        "specificity": 0.8,
+        "hl_p_value": 0.9625157958
+      }
+    ],
+    "odds_ratio_per_sd": [
+      {
+        "model": "240_lo_cluster (SE cluster)",
+        "term": "const",
+        "or_per_sd": 0.0218935926,
+        "or_per_sd_ci_low": 0.0066878775,
+        "or_per_sd_ci_high": 0.0716713781,
+        "p_value": 3e-10
+      },
+      {
+        "model": "240_lo_cluster (SE cluster)",
+        "term": "uht_temp_min",
+        "or_per_sd": 3.8511042575,
+        "or_per_sd_ci_low": 1.2717836012,
+        "or_per_sd_ci_high": 11.6615782651,
+        "p_value": 0.017066515
+      },
+      {
+        "model": "240_lo_cluster (SE cluster)",
+        "term": "flow_rate_avg",
+        "or_per_sd": 1.996763645,
+        "or_per_sd_ci_low": 1.0325046409,
+        "or_per_sd_ci_high": 3.86154686,
+        "p_value": 0.0398769018
+      },
+      {
+        "model": "63_lo_doc_lap (SE MLE)",
+        "term": "const",
+        "or_per_sd": 0.0222768709,
+        "or_per_sd_ci_low": 0.003080268,
+        "or_per_sd_ci_high": 0.1611090239,
+        "p_value": 0.0001642287
+      },
+      {
+        "model": "63_lo_doc_lap (SE MLE)",
+        "term": "uht_temp_min",
+        "or_per_sd": 3.5999303708,
+        "or_per_sd_ci_low": 0.6419376393,
+        "or_per_sd_ci_high": 20.1880959796,
+        "p_value": 0.1453698177
+      },
+      {
+        "model": "63_lo_doc_lap (SE MLE)",
+        "term": "flow_rate_avg",
+        "or_per_sd": 1.8695592879,
+        "or_per_sd_ci_low": 0.4935154225,
+        "or_per_sd_ci_high": 7.0823560345,
+        "p_value": 0.3571792796
+      }
+    ]
+  },
+  "so_phut": 28800,
+  "bai3_em": {
+    "chia": {
+      "n_batches_train": 192,
+      "n_batches_valid": 48,
+      "n_rows_train": 3000,
+      "n_rows_valid": 5760,
+      "batch_overlap": 0
+    },
+    "train": {
+      "EM": 0.9204,
+      "trung_binh": 1.0179,
+      "giam_rmse_pct": 9.5816,
+      "noi_suy_thoi_gian": null,
+      "so_o_bi_xoa": 2140,
+      "mo_ta": "train (MCAR 10 %)"
+    },
+    "valid_mcar": {
+      "EM": 0.8985,
+      "trung_binh": 1.0358,
+      "giam_rmse_pct": 13.2536,
+      "noi_suy_thoi_gian": 1.0696,
+      "so_o_bi_xoa": 4127,
+      "mo_ta": "valid, MCAR 10 %"
+    },
+    "valid_mat_tin_hieu": {
+      "EM": 0.8903,
+      "trung_binh": 1.0722,
+      "giam_rmse_pct": 16.9612,
+      "noi_suy_thoi_gian": 1.0557,
+      "so_o_bi_xoa": 1203,
+      "mo_ta": "valid, mỗi lô 2 cảm biến mất liền 10–15 phút"
+    },
+    "n_iter": 6,
+    "loglik_khong_giam": true
+  },
+  "chuan_bi": {
+    "n_batches": 240,
+    "n_groups": 63,
+    "n_defect_batches": 12,
+    "n_defect_groups": 3,
+    "group_size_counts": {
+      "1": 2,
+      "2": 2,
+      "3": 2,
+      "4": 57
+    }
+  },
+  "thoi_gian_s": 15.5
+}
