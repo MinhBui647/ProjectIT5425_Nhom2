@@ -1,0 +1,26 @@
+FROM apache/airflow:slim-3.1.7-python3.12@sha256:ed9377113321c0b4e2ecb77df79b30d1c94c24000fb3a619caf898d55311f768
+
+USER root
+RUN python -m venv /opt/processing && chown -R airflow:root /opt/processing
+
+USER airflow
+WORKDIR /opt/project
+ENV PIP_USER=false \
+    PYTHONPATH=/opt/project/src:/opt/project/tests \
+    PROCESSING_PYTHON=/opt/processing/bin/python \
+    MPLCONFIGDIR=/tmp/matplotlib
+
+COPY --chown=airflow:root requirements.txt ./
+COPY --chown=airflow:root infra/requirements-storage.txt infra/constraints-storage.txt infra/requirements-airflow.txt infra/constraints-airflow.txt ./infra/
+# Separate interpreters retain the proven processing pins without upgrading Airflow.
+RUN /opt/processing/bin/python -m pip install --no-cache-dir \
+      -r requirements.txt -r infra/requirements-storage.txt -c infra/constraints-storage.txt \
+    && /opt/processing/bin/python -m pip check
+RUN python -m pip install --no-cache-dir -r infra/requirements-airflow.txt -c infra/constraints-airflow.txt \
+    && python -m pip check
+
+COPY --chown=airflow:root src ./src
+COPY --chown=airflow:root tests ./tests
+COPY --chown=airflow:root dags /opt/airflow/dags
+COPY --chown=airflow:root infra/init_airflow.py ./infra/init_airflow.py
+CMD ["airflow", "version"]

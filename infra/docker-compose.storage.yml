@@ -1,0 +1,87 @@
+name: smart-dairy-storage-demo
+x-service: &service
+  image: smart-dairy-storage-demo:local
+  build:
+    context: ..
+    dockerfile: infra/Dockerfile.storage
+    network: host
+  init: true
+  stop_grace_period: 90s
+x-env: &env
+  STORAGE_DEMO_ROOT: /demo/storage_demo
+  STORAGE_DEMO_SILVER_ROOT: s3://smart-dairy-storage-demo/storage_demo/silver
+  STORAGE_DEMO_SILVER_ALLOW_ROOT: s3://smart-dairy-storage-demo/storage_demo
+  MINIO_ENDPOINT: minio:9000
+  MINIO_ACCESS_KEY: storagedemo
+  MINIO_SECRET_KEY: ${STORAGE_DEMO_MINIO_PASSWORD:-storage-demo-local-only}
+  MOCK_URL: http://mock:8010
+services:
+  minio:
+    image: bitnamilegacy/minio@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
+    environment:
+      MINIO_ROOT_USER: storagedemo
+      MINIO_ROOT_PASSWORD: ${STORAGE_DEMO_MINIO_PASSWORD:-storage-demo-local-only}
+      MINIO_DEFAULT_BUCKETS: smart-dairy-storage-demo
+    ports:
+      - '127.0.0.1:${STORAGE_DEMO_MINIO_PORT:-19000}:9000'
+    volumes:
+      - minio:/bitnami/minio/data
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/ready']
+      interval: 3s
+      timeout: 2s
+      retries: 30
+  mock:
+    <<: *service
+    environment:
+      STORAGE_DEMO_ROOT: /demo/storage_demo
+      MOCK_HOST: 0.0.0.0
+      MOCK_PORT: '8010'
+    command: ['python', '-m', 'lakehouse_storage.mock_server']
+    ports:
+      - '127.0.0.1:${STORAGE_DEMO_MOCK_PORT:-18010}:8010'
+    volumes:
+      - payloads:/demo/storage_demo/mock
+    healthcheck:
+      test: ['CMD', 'python', '-c', "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8010/health', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  worker:
+    <<: *service
+    profiles: [ingest]
+    environment:
+      <<: *env
+      MOCK_RUN_REQUEST: ${MOCK_RUN_REQUEST:-{"samples_per_batch":1000,"batches":4}}
+    command: ['python', '-m', 'lakehouse_storage.ingestion_worker', '--create-run']
+    volumes:
+      - runtime:/demo/storage_demo
+      - bronze:/demo/storage_demo/bronze
+      - checkpoints:/demo/storage_demo/worker_state
+      - ../reports/storage/demo:/demo/storage_demo/reports
+    depends_on:
+      minio: {condition: service_healthy}
+      mock: {condition: service_healthy}
+  maintenance:
+    <<: *service
+    profiles: [maintain]
+    environment:
+      <<: *env
+      MAINTENANCE_ENABLED: ${MAINTENANCE_ENABLED:-false}
+      MAINTENANCE_INGESTION_STOPPED: ${MAINTENANCE_INGESTION_STOPPED:-false}
+      MAINTENANCE_FILE_THRESHOLD: ${MAINTENANCE_FILE_THRESHOLD:-2}
+      MAINTENANCE_COOLDOWN_SECONDS: ${MAINTENANCE_COOLDOWN_SECONDS:-3600}
+    command: ['python', '-m', 'lakehouse_storage.maintenance_cli', '--once']
+    volumes:
+      - runtime:/demo/storage_demo
+      - bronze:/demo/storage_demo/bronze
+      - checkpoints:/demo/storage_demo/worker_state
+      - ../reports/storage/demo:/demo/storage_demo/reports
+    depends_on:
+      minio: {condition: service_healthy}
+volumes:
+  minio:
+  payloads:
+  runtime:
+  bronze:
+  checkpoints:

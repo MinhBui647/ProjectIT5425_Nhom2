@@ -1,0 +1,8 @@
+FROM python:3.12-slim@sha256:5e2bdb1b0d542d5039cffb8181c65930093949194a65c365dfb1b0fe13a4fa5b
+WORKDIR /app
+ENV PYTHONPATH=/app/src PYTHONUNBUFFERED=1 MPLCONFIGDIR=/tmp/matplotlib
+COPY requirements.txt ./
+COPY infra/requirements-storage.txt infra/constraints-storage.txt ./infra/
+RUN pip install --no-cache-dir -r requirements.txt -r infra/requirements-storage.txt -c infra/constraints-storage.txt && pip check
+COPY src ./src
+CMD ["python", "-m", "lakehouse_storage.mock_server"]

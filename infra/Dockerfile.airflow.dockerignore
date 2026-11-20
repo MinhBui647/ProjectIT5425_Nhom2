@@ -1,0 +1,17 @@
+**
+!requirements.txt
+!infra
+infra/*
+!infra/requirements-storage.txt
+!infra/constraints-storage.txt
+!infra/requirements-airflow.txt
+!infra/constraints-airflow.txt
+!src
+!src/**
+!tests
+!tests/**
+**/__pycache__
+
+!dags
+!dags/**
+!infra/init_airflow.py
