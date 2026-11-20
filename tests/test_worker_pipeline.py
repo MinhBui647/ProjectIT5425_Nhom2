@@ -31,6 +31,7 @@ def test_normal_and_replay_use_p3_gate(tmp_path):
         assert pl.read_delta(uri).height == 40
         trace = trace_batch(uri, before['batch_id'][0])
         assert trace['integrity_verified']
+        assert len(trace['lineage_sources']) == 2
         assert len(list((root / 'bronze').rglob('*.parquet'))) == 3
 
 

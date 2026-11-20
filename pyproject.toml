@@ -12,5 +12,6 @@ where = ["src"]
 
 [tool.pytest.ini_options]
 markers = [
+    "minio: opt-in isolated storage demo MinIO E2E",
     "integration: requires live external services or a platform-specific engine",
 ]
