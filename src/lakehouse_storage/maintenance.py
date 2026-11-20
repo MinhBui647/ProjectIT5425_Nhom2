@@ -56,7 +56,7 @@ def compact_table(
     )
 
     # Run compaction
-    dt.optimize.compact()
+    dt.optimize.compact(target_size=target_file_size_mb * 1024 * 1024)
 
     # Get file count after
     dt_after = _get_delta_table(table_uri)

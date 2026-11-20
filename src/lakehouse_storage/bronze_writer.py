@@ -1,6 +1,8 @@
 """Bronze layer writer - immutable raw data landing."""
 
 import logging
+import os
+import tempfile
 from datetime import date, datetime, timezone
 from pathlib import Path
 
@@ -60,20 +62,42 @@ def write_bronze_batch(
     out_dir.mkdir(parents=True, exist_ok=True)
 
     timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
-    filename = f"{source_name}_{timestamp}.parquet"
-    filepath = out_dir / filename
-
-    # Windows clocks can return the same microsecond for rapid consecutive
-    # writes. Preserve append-only behavior by selecting a new name rather
-    # than overwriting or failing a valid batch.
-    sequence = 1
-    while filepath.exists():
-        filename = f"{source_name}_{timestamp}_{sequence:02d}.parquet"
-        filepath = out_dir / filename
+    sequence = 0
+    while True:
+        suffix = f"_{sequence:02d}" if sequence else ""
+        filepath = out_dir / f"{source_name}_{timestamp}{suffix}.parquet"
+        reservation = filepath.with_suffix('.reserve')
         sequence += 1
+        try:
+            with reservation.open('x'):
+                pass
+        except FileExistsError:
+            continue
+        # Existing legacy pairs and sidecars left by a crash are immutable too.
+        if filepath.exists() or filepath.with_suffix('.sha256').exists():
+            reservation.unlink()
+            continue
+        break
 
-    df.write_parquet(filepath)
-    _write_checksum(filepath)
+    try:
+        with tempfile.TemporaryDirectory(prefix='.bronze-', dir=out_dir) as staging:
+            staged = Path(staging) / 'payload.tmp'
+            df.write_parquet(staged)
+            _write_checksum(staged)
+            for path in (staged, staged.with_suffix('.sha256')):
+                with path.open('rb') as stream:
+                    os.fsync(stream.fileno())
+            # Hard links publish without replacement. Parquet is the completion
+            # marker: readers cannot see it before its checksum is available.
+            os.link(staged.with_suffix('.sha256'), filepath.with_suffix('.sha256'))
+            os.link(staged, filepath)
+            directory_fd = os.open(out_dir, os.O_RDONLY | os.O_DIRECTORY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+    finally:
+        reservation.unlink()
 
     logger.info("Bronze write: %s (%d rows)", filepath, len(df))
     return str(filepath)
@@ -222,16 +246,21 @@ def _extract_date(df: pl.DataFrame, table_name: str) -> date:
         first = non_null[0]
 
         if isinstance(first, str):
+            if table_name == 'market_reports' and date_col == 'published_date':
+                try:
+                    return datetime.strptime(first, '%m/%d/%Y %H:%M:%S').date()
+                except ValueError:
+                    pass
             try:
                 # Try ISO format first
                 return datetime.fromisoformat(first.replace("Z", "+00:00")).date()
             except ValueError:
-                try:
-                    # Try common date formats
-                    for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]:
+                # Preserve DMY precedence for ambiguous raw dates.
+                for fmt in ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y"]:
+                    try:
                         return datetime.strptime(first[:10], fmt).date()
-                except ValueError:
-                    continue
+                    except ValueError:
+                        continue
         elif isinstance(first, datetime):
             return first.date()
         elif isinstance(first, date):
@@ -252,7 +281,7 @@ def ingest_multiple_files(
     does not abort the whole batch.
     """
     source_name = get_source_name(table_name)
-    root = Path(bronze_root) if bronze_root is not None else None
+    root = Path(bronze_root).resolve() if bronze_root is not None else None
     expected_dir = (root / source_name) if root is not None else None
 
     results = []
