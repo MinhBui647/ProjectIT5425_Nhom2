@@ -7,6 +7,7 @@ One row per production batch. Output matches BRONZE_MES_LIMS_SCHEMA
 from datetime import datetime, timedelta, timezone
 import argparse
 import json
+import os
 from pathlib import Path
 
 import numpy as np
@@ -208,8 +209,8 @@ def write_mes_batch(
 ) -> int:
     """Write MES batch to Silver through the Bronze layer.
 
-    The raw batch is persisted to Bronze (Parquet + SHA-256 sidecar) first,
-    then ingested into Silver so lineage columns are always populated.
+    Low-level compatibility helper: includes lineage but does not run P3 or
+    ensure Gold eligibility. Use the CLI or governed entry point for Gold.
     """
     from deltalake import DeltaTable
 
@@ -241,7 +242,12 @@ def main():
     parser.add_argument("--defect-rate", type=float, default=0.05)
     parser.add_argument("--output-dir", default="data/synthetic", help="Output directory")
     parser.add_argument("--write-delta", action="store_true", help="Write to Delta table")
+    parser.add_argument('--bronze-root', default=os.getenv('STORAGE_GENERATOR_BRONZE_ROOT'))
+    parser.add_argument('--silver-root', default=os.getenv('STORAGE_GENERATOR_SILVER_ROOT'))
+    parser.add_argument('--reports-root', default=os.getenv('STORAGE_GENERATOR_REPORTS_ROOT', 'reports/storage/generator'))
     args = parser.parse_args()
+    if args.write_delta and not args.silver_root:
+        parser.error('--silver-root (or STORAGE_GENERATOR_SILVER_ROOT) is required for governed output')
 
     # Parse date
     if args.date:
@@ -268,9 +274,19 @@ def main():
         )
 
         if args.write_delta:
-            sensor_version = _write_sensor_to_delta(sensor_df)
-            mes_version = write_mes_batch(mes_df)
-            print(f"Day {day_date.date()}: sensor v{sensor_version}, mes v{mes_version}")
+            from .bronze_writer import write_bronze_batch
+            from .config import BRONZE_LOCAL_PATH
+            from .governance_adapter import ingest_governed_bronze_file
+            bronze_root = args.bronze_root or BRONZE_LOCAL_PATH
+            for table, frame in (('sensor_telemetry', sensor_df), ('mes_lims', mes_df)):
+                path = write_bronze_batch(frame, table, bronze_root=bronze_root)
+                result = ingest_governed_bronze_file(
+                    path, table, bronze_root=bronze_root, silver_root=args.silver_root,
+                    reports_root=args.reports_root,
+                )
+                print(json.dumps(result, default=str), flush=True)
+                if result['status'] not in {'PASS', 'PASS_WITH_REJECTIONS', 'SKIPPED_DUPLICATE'}:
+                    return 1
         else:
             all_sensor_rows.append(sensor_df)
             all_mes_rows.append(mes_df)
@@ -295,6 +311,7 @@ def main():
             with open(map_file, "w") as f:
                 json.dump(all_batch_farm_maps, f, indent=2, default=str)
             print(f"Saved: {map_file}")
+    return 0
 
 
 def _write_sensor_to_delta(
@@ -302,7 +319,7 @@ def _write_sensor_to_delta(
     table_uri: str | None = None,
     bronze_root: str | Path | None = None,
 ) -> int:
-    """Write sensor data to Silver through the Bronze layer."""
+    """Low-level compatibility helper; does not run P3 or ensure Gold eligibility."""
     from deltalake import DeltaTable
 
     from .bronze_writer import write_bronze_batch
@@ -325,4 +342,4 @@ def _write_sensor_to_delta(
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

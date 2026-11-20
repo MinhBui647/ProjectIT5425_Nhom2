@@ -7,6 +7,8 @@ BRONZE_SENSOR_TELEMETRY_SCHEMA (string timestamps, float64).
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 import argparse
+import json
+import os
 import time
 
 import numpy as np
@@ -47,7 +49,7 @@ def generate_sensor_batch(
     return pl.DataFrame({
         "timestamp": [ts.isoformat() for ts in timestamps],
         "line_id": [line_id] * n_samples,
-        "batch_id": [batch_id] * n_samples if batch_id else [None] * n_samples,
+        "batch_id": pl.Series('batch_id', [batch_id] * n_samples, dtype=pl.String),
         "preheat_temp": rng.normal(80.0, 0.5, n_samples),
         "uht_temp": rng.normal(140.0, 0.8, n_samples),
         "homo_press_stage1": rng.normal(180.0, 3.0, n_samples),
@@ -67,8 +69,8 @@ def write_sensor_batch(
 ) -> int:
     """Write sensor batch to Silver through the Bronze layer.
 
-    The raw batch is persisted to Bronze (Parquet + SHA-256 sidecar) first,
-    then ingested into Silver so lineage columns are always populated.
+    Low-level compatibility helper: includes lineage but does not run P3 or
+    ensure Gold eligibility. Use the CLI or governed entry point for Gold.
     """
     from deltalake import DeltaTable
 
@@ -99,7 +101,16 @@ def main():
     parser.add_argument("--line-id", default="LINE_UHT_1")
     parser.add_argument("--batch-id", default=None)
     parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument('--bronze-root', default=os.getenv('STORAGE_GENERATOR_BRONZE_ROOT'))
+    parser.add_argument('--silver-root', default=os.getenv('STORAGE_GENERATOR_SILVER_ROOT'))
+    parser.add_argument('--reports-root', default=os.getenv('STORAGE_GENERATOR_REPORTS_ROOT', 'reports/storage/generator'))
     args = parser.parse_args()
+    if not args.silver_root:
+        parser.error('--silver-root (or STORAGE_GENERATOR_SILVER_ROOT) is required for governed output')
+    from .bronze_writer import write_bronze_batch
+    from .config import BRONZE_LOCAL_PATH
+    from .governance_adapter import ingest_governed_bronze_file
+    bronze_root = args.bronze_root or BRONZE_LOCAL_PATH
 
     start = datetime.now(timezone.utc)
     index = 0
@@ -113,15 +124,22 @@ def main():
                 start_time=start,
                 seed=args.seed,
             )
-            version = write_sensor_batch(df)
-            print(f"batch={index} rows={len(df)} version={version}", flush=True)
+            path = write_bronze_batch(df, 'sensor_telemetry', bronze_root=bronze_root)
+            result = ingest_governed_bronze_file(
+                path, 'sensor_telemetry', bronze_root=bronze_root,
+                silver_root=args.silver_root, reports_root=args.reports_root,
+            )
+            print(json.dumps(result, default=str), flush=True)
+            if result['status'] not in {'PASS', 'PASS_WITH_REJECTIONS', 'SKIPPED_DUPLICATE'}:
+                return 1
             start += timedelta(seconds=args.samples)
             index += 1
             if args.batches == 0 or index < args.batches:
                 time.sleep(args.interval)
     except KeyboardInterrupt:
         print("Stopped.")
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
