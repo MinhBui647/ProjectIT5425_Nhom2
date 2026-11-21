@@ -1,0 +1,69 @@
+{
+  "run_id": "df3cc98e-e200-4053-b38d-fda78333468c",
+  "table_name": "sensor_telemetry",
+  "contract_version": "v1",
+  "bronze": {
+    "absolute_path": "D:\\Desktop\\HUST REFERENCES\\2026.1\\IT5425\\Test_project\\data\\01_bronze_vault\\sensor_telemetry\\2026-11-16\\sensor_telemetry_20261116_021559_513270.parquet",
+    "sha256": "7549db02ea3dbe9e73b4eeb320553dec6ed4119d17cbc35ae1705e97bbe9f992",
+    "table_name": "sensor_telemetry",
+    "row_count": 60,
+    "source_timestamp": "2026-11-16T02:15:59.513270+00:00"
+  },
+  "started_at": "2026-11-16T02:23:16.027906+00:00",
+  "finished_at": "2026-11-16T02:23:16.476240+00:00",
+  "counts": {
+    "total": 60,
+    "valid": 60,
+    "rejected": 0
+  },
+  "error_ratio": 0.0,
+  "decision": {
+    "status": "FAIL",
+    "error_ratio": 0.0,
+    "reason": "Hard quality failures: ['sensor_telemetry.canonical_types.v1']",
+    "fail_threshold": 0.005,
+    "valid_row_count": 60,
+    "rejected_row_count": 0,
+    "hard_failure_count": 1
+  },
+  "hard_failures": [
+    "sensor_telemetry.canonical_types.v1"
+  ],
+  "rule_metrics": {
+    "sensor_telemetry.non_empty.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "A governance batch must contain at least one row",
+      "passed": true,
+      "row_count": 60
+    },
+    "sensor_telemetry.required_columns.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "All required canonical columns must exist",
+      "passed": true,
+      "required_columns": [
+        "timestamp",
+        "line_id",
+        "uht_temp"
+      ],
+      "missing_columns": []
+    },
+    "sensor_telemetry.canonical_types.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "Canonical columns must use their v1 data types",
+      "passed": false,
+      "type_mismatches": {
+        "batch_id": {
+          "expected": "String",
+          "actual": "Null"
+        }
+      }
+    }
+  },
+  "artifacts": {
+    "quarantine": null,
+    "quarantine_sha256": null
+  }
+}

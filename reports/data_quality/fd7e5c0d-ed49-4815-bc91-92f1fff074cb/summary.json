@@ -1,0 +1,120 @@
+{
+  "run_id": "fd7e5c0d-ed49-4815-bc91-92f1fff074cb",
+  "table_name": "food_recalls",
+  "contract_version": "v1",
+  "bronze": {
+    "absolute_path": "D:\\Desktop\\HUST REFERENCES\\2026.1\\IT5425\\Test_project\\data\\01_bronze_vault\\food_recalls\\2025-05-21\\food_recalls_20261017_184248_805230.parquet",
+    "sha256": "7755251057e4592e3b0f462826810c5871e15b85abe58d683cd6424b15eb9b9c",
+    "table_name": "food_recalls",
+    "row_count": 677,
+    "source_timestamp": "2026-10-17T18:42:48.805230+00:00"
+  },
+  "started_at": "2026-11-16T02:28:36.433781+00:00",
+  "finished_at": "2026-11-16T02:28:36.502075+00:00",
+  "counts": {
+    "total": 677,
+    "valid": 677,
+    "rejected": 0
+  },
+  "error_ratio": 0.0,
+  "decision": {
+    "status": "PASS",
+    "error_ratio": 0.0,
+    "reason": "All rows passed quality checks",
+    "fail_threshold": 0.005,
+    "valid_row_count": 677,
+    "rejected_row_count": 0,
+    "hard_failure_count": 0
+  },
+  "hard_failures": [],
+  "rule_metrics": {
+    "food_recalls.non_empty.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "A governance batch must contain at least one row",
+      "passed": true,
+      "row_count": 677
+    },
+    "food_recalls.required_columns.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "All required canonical columns must exist",
+      "passed": true,
+      "required_columns": [
+        "source",
+        "recall_id",
+        "published_at",
+        "classification",
+        "ingested_at"
+      ],
+      "missing_columns": []
+    },
+    "food_recalls.canonical_types.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "Canonical columns must use their v1 data types",
+      "passed": true,
+      "type_mismatches": {}
+    },
+    "fda.recall_id.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "recall_id must not be null",
+      "failed_count": 0,
+      "passed_count": 677,
+      "failure_ratio": 0.0
+    },
+    "fda.published_at.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "published_at must not be null",
+      "failed_count": 0,
+      "passed_count": 677,
+      "failure_ratio": 0.0
+    },
+    "fda.classification.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "classification must not be null",
+      "failed_count": 0,
+      "passed_count": 677,
+      "failure_ratio": 0.0
+    },
+    "fda.recall_id.unique.v1": {
+      "dimension": "uniqueness",
+      "severity": "ERROR",
+      "description": "Business key ('recall_id',) must be unique",
+      "failed_count": 0,
+      "passed_count": 677,
+      "failure_ratio": 0.0
+    },
+    "fda.classification.category.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "classification must be one of ('Class I', 'Class II', 'Class III')",
+      "failed_count": 0,
+      "passed_count": 677,
+      "failure_ratio": 0.0
+    },
+    "fda.source.constant.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "source must equal FDA",
+      "failed_count": 0,
+      "passed_count": 677,
+      "failure_ratio": 0.0
+    },
+    "fda.published_at.not_after_crawl.v1": {
+      "dimension": "timeliness",
+      "severity": "ERROR",
+      "description": "published_at must not be later than ingested_at",
+      "failed_count": 0,
+      "passed_count": 677,
+      "failure_ratio": 0.0
+    }
+  },
+  "artifacts": {
+    "quarantine": null,
+    "quarantine_sha256": null
+  }
+}

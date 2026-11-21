@@ -1,0 +1,133 @@
+{
+  "run_id": "4fe85bff-1741-4237-a156-7161394a6992",
+  "table_name": "weather",
+  "contract_version": "v1",
+  "bronze": {
+    "absolute_path": "D:\\Desktop\\HUST REFERENCES\\2026.1\\IT5425\\Test_project\\data\\01_bronze_vault\\weather\\2025-01-01\\weather_20261017_184243_820795.parquet",
+    "sha256": "4b12cd628a93d95803a1fd38c57fcbd6fc613d6c945bcaaba27259634b62f84d",
+    "table_name": "weather",
+    "row_count": 4320,
+    "source_timestamp": "2026-10-17T18:42:43.820795+00:00"
+  },
+  "started_at": "2026-11-16T02:28:11.519039+00:00",
+  "finished_at": "2026-11-16T02:28:11.693490+00:00",
+  "counts": {
+    "total": 4320,
+    "valid": 4320,
+    "rejected": 0
+  },
+  "error_ratio": 0.0,
+  "decision": {
+    "status": "PASS",
+    "error_ratio": 0.0,
+    "reason": "All rows passed quality checks",
+    "fail_threshold": 0.005,
+    "valid_row_count": 4320,
+    "rejected_row_count": 0,
+    "hard_failure_count": 0
+  },
+  "hard_failures": [],
+  "rule_metrics": {
+    "weather.non_empty.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "A governance batch must contain at least one row",
+      "passed": true,
+      "row_count": 4320
+    },
+    "weather.required_columns.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "All required canonical columns must exist",
+      "passed": true,
+      "required_columns": [
+        "farm_id",
+        "observed_at"
+      ],
+      "missing_columns": []
+    },
+    "weather.canonical_types.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "Canonical columns must use their v1 data types",
+      "passed": true,
+      "type_mismatches": {}
+    },
+    "weather.daily_coverage.warning.v1": {
+      "dimension": "completeness",
+      "severity": "WARNING",
+      "description": "A complete UTC farm/day normally contains 24 observations",
+      "passed": true,
+      "expected_per_day": 24,
+      "incomplete_groups": []
+    },
+    "weather.farm_id.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "farm_id must not be null",
+      "failed_count": 0,
+      "passed_count": 4320,
+      "failure_ratio": 0.0
+    },
+    "weather.observed_at.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "observed_at must not be null",
+      "failed_count": 0,
+      "passed_count": 4320,
+      "failure_ratio": 0.0
+    },
+    "weather.farm_id_observed_at.unique.v1": {
+      "dimension": "uniqueness",
+      "severity": "ERROR",
+      "description": "Business key ('farm_id', 'observed_at') must be unique",
+      "failed_count": 0,
+      "passed_count": 4320,
+      "failure_ratio": 0.0
+    },
+    "weather.farm_id.category.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "farm_id must be one of ('MOC_CHAU', 'BA_VI', 'NGHE_AN', 'LAM_DONG', 'CU_CHI')",
+      "failed_count": 0,
+      "passed_count": 4320,
+      "failure_ratio": 0.0
+    },
+    "weather.temperature_c.range.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "temperature_c must be between -10.0 and 45.0",
+      "failed_count": 0,
+      "passed_count": 4320,
+      "failure_ratio": 0.0
+    },
+    "weather.relative_humidity_pct.range.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "relative_humidity_pct must be between 0.0 and 100.0",
+      "failed_count": 0,
+      "passed_count": 4320,
+      "failure_ratio": 0.0
+    },
+    "weather.precipitation_mm.non_negative.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "precipitation_mm must be non-negative when present",
+      "failed_count": 0,
+      "passed_count": 4320,
+      "failure_ratio": 0.0
+    },
+    "weather.thi_index.required_for_inputs.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "thi_index is required when temperature and humidity exist",
+      "failed_count": 0,
+      "passed_count": 4320,
+      "failure_ratio": 0.0
+    }
+  },
+  "artifacts": {
+    "quarantine": null,
+    "quarantine_sha256": null
+  }
+}

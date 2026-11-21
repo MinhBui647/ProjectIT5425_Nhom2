@@ -1,0 +1,126 @@
+{
+  "run_id": "94cca95e-fdf0-4a3f-ba29-d1158c8d0782",
+  "table_name": "market_indices",
+  "contract_version": "v1",
+  "bronze": {
+    "absolute_path": "D:\\Desktop\\HUST REFERENCES\\2026.1\\IT5425\\Test_project\\data\\01_bronze_vault\\market_indices\\2025-01-01\\market_indices_20261017_184255_115733.parquet",
+    "sha256": "d8d5ba9bce350e7aa88963053a0532bd3175a551c3561ffc042bc7daca397b9d",
+    "table_name": "market_indices",
+    "row_count": 6,
+    "source_timestamp": "2026-10-17T18:42:55.115733+00:00"
+  },
+  "started_at": "2026-11-16T02:28:31.702304+00:00",
+  "finished_at": "2026-11-16T02:28:31.777314+00:00",
+  "counts": {
+    "total": 36,
+    "valid": 0,
+    "rejected": 36
+  },
+  "error_ratio": 1.0,
+  "decision": {
+    "status": "FAIL",
+    "error_ratio": 1.0,
+    "reason": "Error ratio 1.000000 exceeds threshold 0.005000",
+    "fail_threshold": 0.005,
+    "valid_row_count": 0,
+    "rejected_row_count": 36,
+    "hard_failure_count": 0
+  },
+  "hard_failures": [],
+  "rule_metrics": {
+    "market_indices.non_empty.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "A governance batch must contain at least one row",
+      "passed": true,
+      "row_count": 36
+    },
+    "market_indices.required_columns.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "All required canonical columns must exist",
+      "passed": true,
+      "required_columns": [
+        "source",
+        "index_name",
+        "period_start",
+        "ingested_at"
+      ],
+      "missing_columns": []
+    },
+    "market_indices.canonical_types.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "Canonical columns must use their v1 data types",
+      "passed": true,
+      "type_mismatches": {}
+    },
+    "fao.month_continuity.warning.v1": {
+      "dimension": "completeness",
+      "severity": "WARNING",
+      "description": "FAO month gaps are advisory unless continuity is required",
+      "passed": true,
+      "month_gaps": []
+    },
+    "fao.source.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "source must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.index_name.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "index_name must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.period_start.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "period_start must not be null",
+      "failed_count": 36,
+      "passed_count": 0,
+      "failure_ratio": 1.0
+    },
+    "fao.index_value.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "index_value must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.source_index_name_period_start.unique.v1": {
+      "dimension": "uniqueness",
+      "severity": "ERROR",
+      "description": "Business key ('source', 'index_name', 'period_start') must be unique",
+      "failed_count": 36,
+      "passed_count": 0,
+      "failure_ratio": 1.0
+    },
+    "fao.index_value.positive.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "FAO index_value must be positive",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.source.constant.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "source must equal FAO",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    }
+  },
+  "artifacts": {
+    "quarantine": "D:\\Desktop\\HUST REFERENCES\\2026.1\\IT5425\\Test_project\\data\\quality_quarantine\\market_indices\\2026-11-16\\94cca95e-fdf0-4a3f-ba29-d1158c8d0782\\invalid_rows.parquet",
+    "quarantine_sha256": "cbdf38f716df4200f42c3b9bab2d6238f5c5ee7c27c7cd39e8f37e47ac0cd33c"
+  }
+}

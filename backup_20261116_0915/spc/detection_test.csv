@@ -1,0 +1,17 @@
+﻿scenario,description,method,inject_batch_order,inject_batch_id,detected,first_detect_batch_order,first_detect_batch_id,delay_batches,false_alarm_before_injection,n_batches_phase2
+doi_chung_khong_cay,Không cấy gì: dùng chuỗi thật để xem báo động nền,shewhart_I,20,145,False,,,,False,116
+doi_chung_khong_cay,Không cấy gì: dùng chuỗi thật để xem báo động nền,shewhart_nelson,20,145,True,33.0,158.0,14.0,True,116
+doi_chung_khong_cay,Không cấy gì: dùng chuỗi thật để xem báo động nền,cusum,20,145,False,,,,False,116
+doi_chung_khong_cay,Không cấy gì: dùng chuỗi thật để xem báo động nền,ewma,20,145,False,,,,False,116
+dich_+1.5sigma,"Cấy lệch trung bình +1,5σ từ lô inject_at",shewhart_I,20,145,False,,,,False,116
+dich_+1.5sigma,"Cấy lệch trung bình +1,5σ từ lô inject_at",shewhart_nelson,20,145,True,24.0,149.0,5.0,True,116
+dich_+1.5sigma,"Cấy lệch trung bình +1,5σ từ lô inject_at",cusum,20,145,True,20.0,145.0,1.0,False,116
+dich_+1.5sigma,"Cấy lệch trung bình +1,5σ từ lô inject_at",ewma,20,145,True,21.0,146.0,2.0,False,116
+dich_+0.5sigma,"Cấy lệch trung bình +0,5σ từ lô inject_at",shewhart_I,20,145,False,,,,False,116
+dich_+0.5sigma,"Cấy lệch trung bình +0,5σ từ lô inject_at",shewhart_nelson,20,145,True,35.0,160.0,16.0,True,116
+dich_+0.5sigma,"Cấy lệch trung bình +0,5σ từ lô inject_at",cusum,20,145,True,67.0,192.0,48.0,False,116
+dich_+0.5sigma,"Cấy lệch trung bình +0,5σ từ lô inject_at",ewma,20,145,True,71.0,196.0,52.0,False,116
+troi_dan_drift,Cấy trôi tuyến tính +0.05σ mỗi lô từ lô inject_at,shewhart_I,20,145,True,67.0,192.0,48.0,False,116
+troi_dan_drift,Cấy trôi tuyến tính +0.05σ mỗi lô từ lô inject_at,shewhart_nelson,20,145,True,35.0,160.0,16.0,True,116
+troi_dan_drift,Cấy trôi tuyến tính +0.05σ mỗi lô từ lô inject_at,cusum,20,145,True,46.0,171.0,27.0,False,116
+troi_dan_drift,Cấy trôi tuyến tính +0.05σ mỗi lô từ lô inject_at,ewma,20,145,True,46.0,171.0,27.0,False,116

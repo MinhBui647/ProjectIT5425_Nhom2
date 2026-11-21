@@ -6,12 +6,12 @@
     "uht_temp_min",
     "uht_temp_max",
     "flow_rate_avg",
+    "n_anomalies",
     "day_of_week",
     "humidity_avg_pct",
     "thi_index",
     "is_heat_stress",
     "gdt_smp_usd",
-    "fao_dairy_index",
     "homo_press1_avg"
   ],
   "dropped": [
@@ -24,79 +24,79 @@
       "reason": "hằng số (phương sai bằng 0)"
     },
     {
-      "feature": "n_anomalies",
+      "feature": "fao_dairy_index",
       "reason": "hằng số (phương sai bằng 0)"
     },
     {
       "feature": "fat_in",
-      "reason": "VIF = 630.7 > 5.0"
+      "reason": "VIF = 637.2 > 5.0"
     },
     {
       "feature": "preheat_temp_avg",
-      "reason": "VIF = 152.0 > 5.0"
+      "reason": "VIF = 145.9 > 5.0"
     },
     {
       "feature": "uht_temp_avg",
-      "reason": "VIF = 79.9 > 5.0"
+      "reason": "VIF = 78.0 > 5.0"
     },
     {
       "feature": "homo_press2_avg",
-      "reason": "VIF = 51.3 > 5.0"
+      "reason": "VIF = 50.3 > 5.0"
     },
     {
       "feature": "conductivity_avg",
-      "reason": "VIF = 33.2 > 5.0"
+      "reason": "VIF = 32.2 > 5.0"
     },
     {
       "feature": "temperature_avg_c",
-      "reason": "VIF = 19.8 > 5.0"
-    },
-    {
-      "feature": "gdt_wmp_usd",
-      "reason": "VIF = 9.0 > 5.0"
+      "reason": "VIF = 19.7 > 5.0"
     },
     {
       "feature": "power_kwh",
       "reason": "VIF = 8.8 > 5.0"
+    },
+    {
+      "feature": "gdt_wmp_usd",
+      "reason": "VIF = 6.6 > 5.0"
     }
   ],
   "vif_final": {
-    "protein_in": 1.378,
-    "acidity_sh": 1.117,
-    "uht_temp_std": 1.338,
-    "uht_temp_min": 1.163,
-    "uht_temp_max": 1.351,
-    "flow_rate_avg": 1.888,
-    "day_of_week": 1.066,
-    "humidity_avg_pct": 2.055,
-    "thi_index": 3.398,
-    "is_heat_stress": 4.238,
-    "gdt_smp_usd": 2.874,
-    "fao_dairy_index": 3.635,
-    "homo_press1_avg": 1.987
+    "protein_in": 1.33,
+    "acidity_sh": 1.13,
+    "uht_temp_std": 1.377,
+    "uht_temp_min": 1.154,
+    "uht_temp_max": 1.417,
+    "flow_rate_avg": 1.908,
+    "n_anomalies": 1.156,
+    "day_of_week": 1.069,
+    "humidity_avg_pct": 1.559,
+    "thi_index": 3.387,
+    "is_heat_stress": 3.858,
+    "gdt_smp_usd": 1.25,
+    "homo_press1_avg": 1.921
   },
   "vif_initial": {
-    "fat_in": 630.711,
-    "protein_in": 1.542,
-    "acidity_sh": 1.181,
-    "uht_temp_avg": 119.921,
-    "uht_temp_std": 1.591,
-    "uht_temp_min": 1.36,
-    "uht_temp_max": 1.882,
-    "flow_rate_avg": 2.72,
-    "power_kwh": 22.651,
+    "fat_in": 637.214,
+    "protein_in": 1.52,
+    "acidity_sh": 1.176,
+    "uht_temp_avg": 119.57,
+    "uht_temp_std": 1.643,
+    "uht_temp_min": 1.319,
+    "uht_temp_max": 1.962,
+    "flow_rate_avg": 2.572,
+    "power_kwh": 21.702,
+    "n_anomalies": 1.235,
     "day_of_week": 1.12,
-    "temperature_avg_c": 20.74,
-    "humidity_avg_pct": 2.321,
-    "thi_index": 16.373,
-    "is_heat_stress": 5.441,
-    "gdt_wmp_usd": 9.939,
-    "gdt_smp_usd": 5.902,
-    "fao_dairy_index": 5.889,
-    "preheat_temp_avg": 313.913,
-    "homo_press1_avg": 18.707,
-    "homo_press2_avg": 106.173,
-    "conductivity_avg": 70.344
+    "temperature_avg_c": 20.766,
+    "humidity_avg_pct": 2.049,
+    "thi_index": 16.197,
+    "is_heat_stress": 5.249,
+    "gdt_wmp_usd": 7.294,
+    "gdt_smp_usd": 5.954,
+    "preheat_temp_avg": 313.225,
+    "homo_press1_avg": 17.615,
+    "homo_press2_avg": 107.978,
+    "conductivity_avg": 70.947
   },
   "vif_threshold": 5.0,
   "excluded_as_ids_or_targets": [

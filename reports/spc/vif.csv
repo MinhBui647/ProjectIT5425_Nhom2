@@ -1,25 +1,25 @@
 ﻿feature,vif_initial,vif_final,status,reason
-acidity_sh,1.181,1.117,selected,
-conductivity_avg,70.344,,dropped,VIF = 33.2 > 5.0
-day_of_week,1.12,1.066,selected,
+acidity_sh,1.176,1.13,selected,
+conductivity_avg,70.947,,dropped,VIF = 32.2 > 5.0
+day_of_week,1.12,1.069,selected,
 duration_min,,,dropped,hằng số (phương sai bằng 0)
-fao_dairy_index,5.889,3.635,selected,
-fat_in,630.711,,dropped,VIF = 630.7 > 5.0
-flow_rate_avg,2.72,1.888,selected,
-gdt_smp_usd,5.902,2.874,selected,
-gdt_wmp_usd,9.939,,dropped,VIF = 9.0 > 5.0
-homo_press1_avg,18.707,1.987,selected,
-homo_press2_avg,106.173,,dropped,VIF = 51.3 > 5.0
-humidity_avg_pct,2.321,2.055,selected,
-is_heat_stress,5.441,4.238,selected,
-n_anomalies,,,dropped,hằng số (phương sai bằng 0)
+fao_dairy_index,,,dropped,hằng số (phương sai bằng 0)
+fat_in,637.214,,dropped,VIF = 637.2 > 5.0
+flow_rate_avg,2.572,1.908,selected,
+gdt_smp_usd,5.954,1.25,selected,
+gdt_wmp_usd,7.294,,dropped,VIF = 6.6 > 5.0
+homo_press1_avg,17.615,1.921,selected,
+homo_press2_avg,107.978,,dropped,VIF = 50.3 > 5.0
+humidity_avg_pct,2.049,1.559,selected,
+is_heat_stress,5.249,3.858,selected,
+n_anomalies,1.235,1.156,selected,
 n_readings,,,dropped,hằng số (phương sai bằng 0)
-power_kwh,22.651,,dropped,VIF = 8.8 > 5.0
-preheat_temp_avg,313.913,,dropped,VIF = 152.0 > 5.0
-protein_in,1.542,1.378,selected,
-temperature_avg_c,20.74,,dropped,VIF = 19.8 > 5.0
-thi_index,16.373,3.398,selected,
-uht_temp_avg,119.921,,dropped,VIF = 79.9 > 5.0
-uht_temp_max,1.882,1.351,selected,
-uht_temp_min,1.36,1.163,selected,
-uht_temp_std,1.591,1.338,selected,
+power_kwh,21.702,,dropped,VIF = 8.8 > 5.0
+preheat_temp_avg,313.225,,dropped,VIF = 145.9 > 5.0
+protein_in,1.52,1.33,selected,
+temperature_avg_c,20.766,,dropped,VIF = 19.7 > 5.0
+thi_index,16.197,3.387,selected,
+uht_temp_avg,119.57,,dropped,VIF = 78.0 > 5.0
+uht_temp_max,1.962,1.417,selected,
+uht_temp_min,1.319,1.154,selected,
+uht_temp_std,1.643,1.377,selected,
