@@ -9,7 +9,7 @@ from lakehouse_storage.service_config import require_namespace, require_local_tr
 from lakehouse_storage.worker_state import NeedsReview, single_instance
 from lakehouse_pipeline.run_manifest import ManifestStore
 from lakehouse_pipeline.source_config import SourceConfig
-from lakehouse_pipeline.silver_snapshot import capture_snapshot, read_snapshot
+from lakehouse_pipeline.silver_snapshot import capture_snapshot, validate_snapshot
 
 
 class BusinessFailure(ValueError):
@@ -84,6 +84,13 @@ def execute_stage(config, path, stage, table=None, *, client=None):
         started = time.perf_counter()
         metadata = None
         try:
+            if stage in {'snapshot', 'finalize'}:
+                snapshot_stage = value['stages'].get('snapshot', {})
+                pinned = (snapshot_stage.get('captured') is True or snapshot_stage.get('status') == 'SUCCESS'
+                          or value['status'] == 'SUCCESS' or bool(value.get('silver_snapshot')))
+                if pinned:
+                    # Preserve legacy capture evidence before any retry can fail.
+                    value['stages'].setdefault('snapshot', {})['captured'] = True
             metadata = worker.bind_manifest(value['mock_run_id'])
             if set(value['config']['sources']) - {b['table_name'] for b in metadata['batches']}:
                 raise BusinessFailure('required source absent from manifest')
@@ -106,26 +113,29 @@ def execute_stage(config, path, stage, table=None, *, client=None):
                     if record['status'] == 'NO_DATA' and table not in value['config']['optional_sources']:
                         raise BusinessFailure(f'required source NO_DATA: {table}')
             elif stage in {'snapshot', 'finalize'}:
-                records = _records(worker, metadata)
+                records = _records(worker, metadata, require_complete=True)
                 for record in records:
                     if record.get('bronze_path'):
                         worker.publish(metadata['run_id'], record['sequence'])
-                if stage == 'snapshot':
+                if pinned:
+                    try:
+                        validate_snapshot(value.get('silver_snapshot'), records, value['config']['sources'], value['config']['optional_sources'])
+                    except (ValueError, KeyError, TypeError) as exc:
+                        raise NeedsReview(f'pinned snapshot needs review: {exc}') from exc
+                elif stage == 'snapshot':
                     value['silver_snapshot'] = capture_snapshot(records, value['config']['sources'], value['config']['optional_sources'])
+                    value['stages'].setdefault('snapshot', {})['captured'] = True
                 else:
-                    if value['stages'].get('snapshot', {}).get('status') != 'SUCCESS':
-                        raise BusinessFailure('snapshot stage not complete')
-                    capture_snapshot(records, value['config']['sources'], value['config']['optional_sources'])
-                    for name, snapshot in value['silver_snapshot'].items():
-                        if read_snapshot(value['silver_snapshot'], name).height != snapshot['total_rows']:
-                            raise BusinessFailure('pinned snapshot unavailable or count changed')
+                    raise BusinessFailure('snapshot stage not complete')
+                if stage == 'finalize':
                     value['status'] = 'SUCCESS'
             else:
                 raise BusinessFailure('unknown pipeline stage')
-            value['stages'][key] = {'status': 'SUCCESS', 'duration_seconds': time.perf_counter() - started}
+            value['stages'].setdefault(key, {}).update(status='SUCCESS', duration_seconds=time.perf_counter() - started)
+            value['stages'][key].pop('error', None)
         except Exception as exc:
             value['status'] = 'NEEDS_REVIEW' if isinstance(exc, NeedsReview) else 'FAILED'
-            value['stages'][key] = {'status': value['status'], 'error': str(exc), 'duration_seconds': time.perf_counter() - started}
+            value['stages'].setdefault(key, {}).update(status=value['status'], error=str(exc), duration_seconds=time.perf_counter() - started)
             raise
         finally:
             if metadata:
@@ -134,7 +144,7 @@ def execute_stage(config, path, stage, table=None, *, client=None):
         return {'manifest_path': str(path), 'stage': key, 'status': value['stages'][key]['status']}
 
 
-def _records(worker, metadata, tolerate_corrupt=False):
+def _records(worker, metadata, tolerate_corrupt=False, require_complete=False):
     records = []
     for entry in metadata['batches']:
         try:
@@ -143,6 +153,8 @@ def _records(worker, metadata, tolerate_corrupt=False):
             if not tolerate_corrupt:
                 raise
             record = {**entry, 'status': 'NEEDS_REVIEW'}
+        if record is None and require_complete:
+            raise BusinessFailure(f"missing checkpoint: sequence {entry['sequence']} table {entry['table_name']}")
         if record:
             records.append(record)
     return records

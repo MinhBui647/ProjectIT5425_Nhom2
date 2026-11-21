@@ -7,7 +7,7 @@ from lakehouse_storage import config as core_config
 from lakehouse_storage.service_config import ServiceConfig
 from lakehouse_storage.maintenance_policy import MaintenancePolicy
 from lakehouse_storage.maintenance_runner import MaintenanceRunner
-from lakehouse_pipeline.pipeline import prepare_run, run_pipeline
+from lakehouse_pipeline.pipeline import prepare_run, run_pipeline, execute_stage, BusinessFailure
 from lakehouse_pipeline.silver_snapshot import read_snapshot
 from lakehouse_pipeline.run_manifest import ManifestStore
 from test_lakehouse_pipeline_e2e import HttpClient
@@ -39,9 +39,38 @@ def test_full_minio_versions_replay_compaction_and_cooldown(tmp_path, monkeypatc
     assert compact['decision'] == 'RUN', compact
     assert read_snapshot(snapshot, 'sensor_telemetry').sort('timestamp').equals(before)
     assert pl.read_delta(policy.table_uri, storage_options=core_config.get_storage_options()).sort('timestamp').equals(before)
+    assert run_pipeline(config, path, client=client)['silver_snapshot'] == snapshot
+    other = prepare_run(config, 'minio/append', {'sources': ['sensor_telemetry'], 'seed': 43,
+                        'samples_per_batch': 10, 'batches': 2}, client=client)
+    run_pipeline(config, other, client=client)
+    replay = run_pipeline(config, path, client=client)
+    assert replay['silver_snapshot'] == snapshot
+    assert read_snapshot(replay['silver_snapshot'], 'sensor_telemetry').sort('timestamp').equals(before)
     assert MaintenanceRunner(history).run(policy, enabled=True, ingestion_stopped=True)['reason'] == 'cooldown'
     preview = runner.run(policy, 'vacuum_preview', enabled=True, ingestion_stopped=True)
     assert preview['result']['dry_run'] is True
     evidence = {'remote': remote, 'snapshot': snapshot, 'compaction': compact, 'vacuum_preview': preview}
     from lakehouse_storage.worker_state import atomic_json
     atomic_json(root / 'minio_evidence.json', evidence)
+
+
+def test_minio_partial_batch_cannot_finalize_and_resumes(tmp_path, monkeypatch):
+    from lakehouse_storage.ingestion_worker import IngestionWorker
+
+    monkeypatch.setattr(core_config, 'MINIO_ENDPOINT', os.getenv('STORAGE_DEMO_TEST_ENDPOINT', '127.0.0.1:29000'))
+    monkeypatch.setattr(core_config, 'MINIO_ACCESS_KEY', 'storagedemo')
+    monkeypatch.setattr(core_config, 'MINIO_SECRET_KEY', os.getenv('STORAGE_DEMO_MINIO_PASSWORD', 'storage-demo-local-only'))
+    monkeypatch.setattr(core_config, 'MINIO_SECURE', False)
+    root = tmp_path / 'storage_demo'
+    remote = 's3://smart-dairy-storage-demo/storage_demo/workflow-tests/' + uuid.uuid4().hex
+    config = ServiceConfig(root, remote + '/silver', remote, 'http://test')
+    client = HttpClient(root / 'mock')
+    path = prepare_run(config, 'minio/partial', {'sources': ['sensor_telemetry'], 'samples_per_batch': 10, 'batches': 2}, client=client)
+    run_id = ManifestStore(root).load(path)['mock_run_id']
+    assert IngestionWorker(config, client).process(run_id, 0)['status'] == 'DONE'
+    for stage in ('snapshot', 'finalize'):
+        with pytest.raises(BusinessFailure, match='missing checkpoint.*1.*sensor_telemetry'):
+            execute_stage(config, path, stage, client=client)
+    result = run_pipeline(config, path, client=client)
+    assert result['status'] == 'SUCCESS'
+    assert read_snapshot(result['silver_snapshot'], 'sensor_telemetry').height == 20

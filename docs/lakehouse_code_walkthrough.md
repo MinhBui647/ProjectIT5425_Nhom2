@@ -63,8 +63,12 @@ exponential backoff hữu hạn. Schema/identity/digest/404 không retry nghiệ
 optional, start/end có timezone và tham số live. Window là [start,end), UTC.
 `local-generator` chỉ mô phỏng S1/S2; live không tuyên bố có kết nối production
 SCADA/MES. `sources.py` lazy import từng hàm P2, truyền dates thay runner hardcode;
-API ngày inclusive nhận end trừ một microsecond. Timestamp sub-day được lọc ở
-collection; P3 luôn nhận nguyên file với `date_from/date_to=None`.
+API ngày inclusive nhận end trừ một microsecond. Riêng GDT so timestamp với
+end_date ở 00:00 nên wrapper dùng ceil-ngày UTC của end: end đúng 00:00 giữ
+ngày đó, end giữa ngày lấy ngày kế tiếp. Sau thu thập vẫn lọc `[start,end)`;
+event đúng end bị loại. P2 không đổi, raw values giữ nguyên. P3 luôn nhận nguyên
+file với `date_from/date_to=None`. Regression GDT chạy collector thật với HTTP
+helper được stub, không phải bằng chứng kết nối API GDT thật.
 
 `worker_state.py` lưu manifest bất biến cùng target binding. Khi có manifest mới,
 load lấy table/source/variant/digest từ entry, không suy sequence thành sensor.
@@ -96,18 +100,26 @@ image/dependency versions, stages, artifacts và Silver snapshot. Atomic updates
 không thêm cột vận hành vào business schema. Git hash unknown được ghi đúng là
 unknown khi image không cung cấp revision; không suy hash giả.
 
-`silver_snapshot.py` nhận records DONE của từng nguồn, đọc latest Delta dưới lock,
-kiểm số accepted rows và quality IDs cho từng Bronze hash/path/contract. Nó chốt
-URI/version/total_rows/batch evidence. `read_snapshot()` luôn đọc `version` đã
-chốt với storage_options. Append về sau không thay đầu vào đã chọn; retention
-vẫn có thể xóa file lịch sử nên versioning không thay backup.
+`silver_snapshot.py` nhận records DONE của từng nguồn, đọc latest Delta dưới lock
+ở lần capture đầu, kiểm accepted rows/quality IDs/statuses theo Bronze hash/path/
+contract và lưu URI/version/total_rows/batch evidence. `validate_snapshot()` dùng
+cùng logic đối chiếu tại version đã lưu khi retry/finalize, không chốt lại latest.
+`read_snapshot()` mở DeltaTable theo version cụ thể và kiểm version thực trước
+khi đọc với storage_options. Append/compaction sau capture không thay map hoặc
+pinned rows, kể cả rerun toàn pipeline; retention vẫn có thể xóa file lịch sử
+nên versioning không thay backup.
 
 `pipeline.py` cung cấp prepare, bronze, verify, govern, snapshot, finalize. Mọi
 stage giữ chung local lock. Prepare ghi config trước khi POST mock, key phụ thuộc
 identity bền vững; retry sau mất response không đổi run. Stage failure vẫn lưu
 những artifact/P3 commit đã có, không hứa rollback nhiều bảng. Finalize kiểm đủ
-nguồn, quality và pinned versions; thiếu nguồn bắt buộc hoặc NO_DATA không được
-coi là full success. `__main__.py` dùng JSON stdin cho Airflow và arguments cho
+checkpoint của từng sequence trong manifest, quality và pinned versions; thiếu
+một batch, thiếu nguồn bắt buộc hoặc NO_DATA bắt buộc không được coi là success.
+Nhánh thu thập artifact trong finally vẫn cho đọc run dở để giữ failure evidence.
+Stage snapshot lưu `captured=true` ngay khi capture thành công; marker giữ qua
+retry lỗi, nhận diện được cả map `{}` hợp lệ cho USDA-only/optional NO_DATA.
+Stage SUCCESS của manifest cũ cũng được giữ dấu đã capture trước khi retry.
+`__main__.py` dùng JSON stdin cho Airflow và arguments cho
 CLI: exit 0 thành công, 2 lỗi nghiệp vụ/review/config, 3 lỗi infrastructure.
 
 Tests: manifest corruption/config conflict, version đọc lại sau append, full
@@ -230,8 +242,9 @@ chủ đích nhưng worker yêu cầu published_date hợp lệ để không par
 | ManifestStore.prepare/load/save | immutable config binding, schema version, atomic updates |
 | prepare_run | persist context trước create; key ổn định theo identity; trả manifest path |
 | execute_stage | target check + phase lock + callable + stage duration + partial evidence |
-| _records | lấy các checkpoint đã có; report corrupt thành review, không giả DONE |
-| capture_snapshot | đủ required sources, actual Delta version, rows/quality/lineage match |
+| _records | snapshot/finalize yêu cầu đủ sequence; reporting vẫn thu checkpoint đang có |
+| capture_snapshot | chốt lần đầu: đủ required sources, actual Delta version, rows/quality/lineage match |
+| validate_snapshot | so map và evidence với checkpoints tại pinned version, không đọc latest |
 | read_snapshot | Polars read_delta theo URI/version đã chốt và storage_options |
 | run_pipeline | chạy cùng chuỗi stages mà Airflow điều phối |
 | main CLI | parse JSON/arguments, exit 0/2/3, response metadata nhỏ |

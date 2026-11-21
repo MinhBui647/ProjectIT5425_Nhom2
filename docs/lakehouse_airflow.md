@@ -72,6 +72,19 @@ reads the same manifest and Bronze path. A PUBLISHING orphan is NEEDS_REVIEW and
 requires operator inspection, not a new automatic publish. Clearing a failed
 quality task without changing source evidence must fail again.
 
+Snapshot/finalize require a checkpoint for every batch sequence in the durable
+manifest, including optional NO_DATA and every USDA section. A missing checkpoint
+fails with its sequence/table. Resume the affected govern task and its downstream
+tasks after inspecting the preserved evidence; do not manufacture DONE states.
+
+Clearing a captured run reuses its original Silver version map even after a
+different run appends or maintenance compacts the tables. A capture saved before
+finalize is reused too. The snapshot stage retains `captured=true` through failed
+retries; empty maps for USDA-only/optional NO_DATA are valid captures. Legacy
+SUCCESS evidence is recognized without changing manifest schema 1. Validation
+checks pinned versions, rows and provenance. Invalid maps require review; missing
+historical files/versions fail rather than repinning to latest.
+
 All stages use pool lakehouse_mutation plus `demo-phase.lock` on the runtime
 volume. Manual CLI must use the same runtime volume. Stop writers outside this
 mechanism or use a separate namespace. These guards cover one host, not arbitrary

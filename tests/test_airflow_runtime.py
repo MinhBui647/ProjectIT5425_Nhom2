@@ -97,6 +97,10 @@ def test_full_scheduler_run_restart_and_clear_no_new_data():
     first = manifest(run)
     assert first['status'] == 'SUCCESS' and len(first['silver_snapshot']) == 6
     assert all(t['state'] == 'success' for t in tasks(s, run).values())
+    other = trigger(s, extra={'request': {'sources': ['sensor_telemetry'], 'seed': 43,
+                                         'samples_per_batch': 20, 'batches': 2}})
+    assert wait_run(s, other)['state'] == 'success', tasks(s, other)
+    assert manifest(other)['silver_snapshot']['sensor_telemetry']['version'] > first['silver_snapshot']['sensor_telemetry']['version']
     subprocess.run(COMPOSE + ['restart', 'airflow-scheduler', 'mock'], check=True, capture_output=True, timeout=90)
     # Clearing reuses the same durable prepare identity and original Bronze paths.
     api(s, 'POST', f'/dags/lakehouse_pipeline/dagRuns/{run}/clear', json={'dry_run': False})
@@ -105,7 +109,15 @@ def test_full_scheduler_run_restart_and_clear_no_new_data():
     assert second['mock_run_id'] == first['mock_run_id']
     assert second['silver_snapshot'] == first['silver_snapshot']
     assert [r['bronze_path'] for r in second['artifacts']] == [r['bronze_path'] for r in first['artifacts']]
-    record('normal-restart-clear', {'run_id': run, 'manifest': second, 'tasks': tasks(s, run)})
+    pinned_rows = container_python("""
+import json,sys
+from lakehouse_pipeline.silver_snapshot import read_snapshot
+value=json.load(open(sys.argv[1]))
+print(json.dumps({name:read_snapshot(value['silver_snapshot'],name).height for name in value['silver_snapshot']}))
+""", manifest_path(run))
+    assert pinned_rows == {name: entry['total_rows'] for name, entry in first['silver_snapshot'].items()}
+    record('normal-restart-clear', {'run_id': run, 'other_run_id': other, 'pinned_rows': pinned_rows,
+                                   'manifest': second, 'tasks': tasks(s, run)})
 
 
 @pytest.mark.parametrize('scenario', ['transient-500', 'invalid-value', 'missing-field'])

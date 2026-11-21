@@ -15,7 +15,7 @@ khi lỗi; version map là tập snapshot, không phải ACID transaction nhiề
   "status": "SUCCESS",
   "mock_run_id": "<32 hex>",
   "config": {"mode":"mock","sources":["weather"],"window":["<start UTC>","<end UTC>"]},
-  "stages": {"snapshot":{"status":"SUCCESS","duration_seconds":0.1}},
+  "stages": {"snapshot":{"status":"SUCCESS","captured":true,"duration_seconds":0.1}},
   "artifacts": [],
   "silver_snapshot": {"weather":{"uri":"s3://smart-dairy-storage-demo/storage_demo/workflow/silver/weather","version":0,"total_rows":5,"batches":[]}}
 }
@@ -34,6 +34,27 @@ Bronze artifact ghi path, payload digest, Parquet SHA-256 và trạng thái. Sid
 nhau ở path Bronze mới, duplicate evidence ghi `bronze_paths` của commit gốc;
 manifest vẫn giữ file mới làm đầu vào hiện tại. Không đổi quality ID thành ID
 của audit replay.
+
+Snapshot và finalize đối chiếu checkpoint với **từng sequence** của batch
+manifest. Thiếu một checkpoint cũng chặn chốt run, kể cả bảng đã có batch DONE.
+Optional NO_DATA phải có checkpoint rõ ràng; USDA phải đủ mọi section DONE.
+Lỗi ghi sequence/table còn thiếu, giữ nguyên Bronze và các commit Silver đã có.
+Resume bước govern của bảng bị dở rồi chạy lại snapshot/finalize; không tạo
+checkpoint DONE thủ công hoặc xóa artifact để bắt pipeline ghi lại.
+
+Capture chỉ chạy lần đầu. Retry/clear/toàn pipeline cùng identity dùng lại map
+đã lưu, kể cả crash sau capture nhưng trước finalize, hoặc run khác đã append/
+compaction làm latest thay đổi. `validate_snapshot()` xác minh đủ bảng, URI,
+version, tổng rows và lineage/contract/quality/counts tại **version đã chốt**.
+Finalize dùng cùng validator; không capture latest để thay bằng chứng cũ.
+
+`stages.snapshot.captured=true` giữ dấu capture qua cả lần retry lỗi. Manifest
+schema vẫn là 1; manifest cũ có stage snapshot SUCCESS hoặc run SUCCESS được
+nhận diện đã chốt trước khi retry. Map `{}` hợp lệ khi chỉ có USDA hoặc mọi
+nguồn Silver optional đều NO_DATA; map rỗng không có nghĩa cần capture lại.
+Map thiếu/sai bảng, URI hoặc evidence gây NEEDS_REVIEW và được giữ để kiểm tra.
+Version/file lịch sử không còn gây lỗi đọc rõ ràng; không fallback latest.
+Không tự sửa manifest lịch sử từng bị chốt sai/repin trước bản sửa này.
 
 ## Đọc version đã chốt
 

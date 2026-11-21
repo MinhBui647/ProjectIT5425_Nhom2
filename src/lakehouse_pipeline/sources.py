@@ -18,6 +18,13 @@ def collect_live(config):
     start, end = config.utc_window()
     window = {'start_date': start.date().isoformat(), 'end_date': (end - timedelta(microseconds=1)).date().isoformat()}
     for table in config.sources:
+        source_window = window
+        if table == 'market_prices':
+            # GDT compares timestamps to midnight, rather than inclusive dates.
+            ceiling = end.replace(hour=0, minute=0, second=0, microsecond=0)
+            if ceiling < end:
+                ceiling += timedelta(days=1)
+            source_window = {**window, 'end_date': ceiling.date().isoformat()}
         module, function = COLLECTORS[table]
         collect = getattr(importlib.import_module(f'crawling_ingestion.{module}'), function)
         if table == 'weather':
@@ -25,7 +32,7 @@ def collect_live(config):
                 raise ValueError('live weather requires farm coordinates')
             results = [collect(farm_id=farm, latitude=lat, longitude=lon, **window) for farm, lat, lon in config.farms]
         else:
-            result = collect(**window, **({'expected_total': config.expected_recalls} if table == 'food_recalls' else {}))
+            result = collect(**source_window, **({'expected_total': config.expected_recalls} if table == 'food_recalls' else {}))
             results = result if isinstance(result, list) else [result]
         if not results:
             results = [None]
