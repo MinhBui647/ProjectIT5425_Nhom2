@@ -69,14 +69,68 @@ PYTHONPATH=src .venv/bin/python -m lakehouse_storage.generate_mes_data \
   --days 1 --date 2026-01-15 --seed 5425 --defect-rate 0 --write-delta \
   --bronze-root /tmp/storage_production/bronze \
   --silver-root /tmp/storage_production/silver \
-  --reports-root /tmp/storage_production/reports
+  --reports-root /tmp/storage_production/reports \
+  --output-dir /tmp/storage_production/synthetic
 ```
 
 `--silver-root` hoặc `STORAGE_GENERATOR_SILVER_ROOT` bắt buộc khi CLI ghi Delta.
 `STORAGE_GENERATOR_BRONZE_ROOT` và `STORAGE_GENERATOR_REPORTS_ROOT` cung cấp default
 cho hai roots còn lại. CLI in toàn bộ kết quả P3; FAIL/infrastructure error trả
-exit code 1. Gate giữ threshold 0.005; dữ liệu mock có thể bị từ chối. CLI MES
-không có `--write-delta` vẫn xuất raw như trước.
+exit code 1. Gate giữ threshold 0.005; dữ liệu mock có thể bị từ chối.
+
+### Bộ sinh MES/cảm biến theo cơ chế mô phỏng
+
+CLI MES mặc định sinh **hai dây chuyền** trong config: 8 lô và 57.600 mẫu
+cảm biến mỗi ngày. Truyền `--line-id LINE_UHT_1` để giữ khối lượng một line
+như trước; có thể truyền danh sách line phân cách bằng dấu phẩy.
+
+| Cờ ghi | Hành vi |
+|---|---|
+| Không có cờ | Parquet tổng hợp theo tên tháng trong `--output-dir` |
+| `--write-bronze` | Append Parquet + checksum vào `--bronze-root`, chưa chạy P3 |
+| `--write-delta` | Bronze → P3 → Silver tại `--silver-root`; bị từ chối trả mã 1 |
+
+Hai cờ ghi loại trừ nhau. Cả ba chế độ lưu `batch_farm_map.json` trong
+`--output-dir`, gộp mapping cũ theo batch ID và chặn conflict/JSON hỏng.
+Mapping được thay qua file tạm; chỉ chạy một writer cho cùng output directory.
+Sau publish Bronze, mapping được lưu trước P3; khi P3 reject, Bronze/mapping
+và các commit Silver trước đó vẫn được giữ. Đây không phải transaction hai bảng.
+
+Các hệ số defect, yield, flow và power được ghi tại
+[ground_truth.md](../../docs/ground_truth.md). Seed ngày đầu mặc định 5425;
+ngày sau tăng 1, seed 0 hợp lệ. Khi sinh tiếp bằng lệnh riêng, phải tăng seed
+đúng offset ngày. Bảo đảm tách seed được kiểm tra cho bộ 90 ngày và hai line;
+không có bảo đảm seed duy nhất cho mọi khoảng ngày hoặc line tùy ý. Giá trị
+theo seed và phân phối MES đổi so với generator cũ, trong khi schema và lời gọi
+cũ được giữ. `_generated_at` tiếp tục dùng thời gian thực.
+
+Ví dụ Linux/WSL để sinh và kiểm tra **file Bronze thực** trong root riêng:
+
+```bash
+mes_demo_root=$(mktemp -d /tmp/mes-production-XXXXXX)
+PYTHONPATH=src .venv/bin/python -m lakehouse_storage.generate_mes_data \
+  --date 2025-01-01 --days 1 --seed 5425 --write-bronze \
+  --bronze-root "$mes_demo_root/bronze" --output-dir "$mes_demo_root/synthetic"
+PYTHONPATH=src .venv/bin/python scripts/verify_mes_dataset.py \
+  --bronze-root "$mes_demo_root/bronze" \
+  --mapping-file "$mes_demo_root/synthetic/batch_farm_map.json" \
+  --start-date 2025-01-01 --days 1 --seed 5425 --output "$mes_demo_root/acceptance.json"
+```
+
+Verifier đọc từng file và giữ thống kê theo lô để kiểm checksum, schema,
+counts, batch IDs, chuỗi timestamp 1 Hz và farm mapping; PASS là nghiệm thu
+Bronze mô phỏng, chưa phải P3/Gold. `--seed` của verifier là thông tin khai báo,
+không được suy ngược từ Parquet. File report phải nằm ngoài Bronze và khác
+file mapping. Đổi `--days 90` ở cả hai lệnh để nghiệm thu bộ 720 lô.
+
+Bronze chỉ append; chạy lại cùng window không phải replay/dedup. Dùng namespace
+mới khi sinh lại cơ chế; không tự đổi nguồn Silver/Gold của nhóm. Gold hiện đọc
+mapping mặc định `data/synthetic/batch_farm_map.json`; custom output cần được
+truyền qua `load_batch_farm_map(path=...)` trong quy trình dựng marts.
+Raw export vẫn dùng tên tháng bắt đầu và có thể bị ghi đè khi chạy lại; bộ dài
+nên dùng Bronze streaming. Bronze writer hiện dùng filesystem POSIX, nên
+native Windows chưa được nghiệm thu. Mock server/Airflow vẫn dùng generator
+cảm biến riêng; chúng chưa có toàn bộ quan hệ cơ chế của daily CLI.
 
 Entry point tương ứng cho một file Bronze đã có:
 
