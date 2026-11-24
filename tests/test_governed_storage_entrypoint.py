@@ -71,6 +71,8 @@ def test_generator_cli_writes_governed_gold_input(tmp_path, module):
     from olap_engineering.build_marts import scan_silver
     args = ['--batches', '1', '--samples', '20', '--seed', '42'] if module == 'mock_sensor_stream' else [
         '--days', '1', '--date', '2026-01-15', '--seed', '5425', '--defect-rate', '0', '--write-delta']
+    if module == 'generate_mes_data':
+        args += ['--output-dir', str(tmp_path / 'synthetic')]
     result = subprocess.run([
         sys.executable, '-B', '-m', 'lakehouse_storage.' + module, *args,
         '--bronze-root', str(tmp_path / 'bronze'), '--silver-root', str(tmp_path / 'silver'),
@@ -82,6 +84,11 @@ def test_generator_cli_writes_governed_gold_input(tmp_path, module):
         frame = scan_silver(table, str(tmp_path / 'silver')).collect()
         assert frame.height > 0
         assert frame['_quality_run_id'].null_count() == 0
+        if module == 'generate_mes_data':
+            assert set(frame['line_id']) == {'LINE_UHT_1', 'LINE_UHT_2'}
+    if module == 'generate_mes_data':
+        from olap_engineering.build_marts import load_batch_farm_map
+        assert len(load_batch_farm_map(tmp_path / 'synthetic' / 'batch_farm_map.json')) == 8
 
 
 @pytest.mark.parametrize('module', ['mock_sensor_stream', 'generate_mes_data'])
@@ -95,7 +102,7 @@ def test_generator_cli_returns_failure_for_rejected_batch(tmp_path, monkeypatch,
         args = ['--batches', '1']
     else:
         monkeypatch.setattr(cli, 'generate_daily_production', lambda **kwargs: (raw, pl.DataFrame(), {}))
-        args = ['--days', '1', '--write-delta']
+        args = ['--days', '1', '--write-delta', '--output-dir', str(tmp_path / 'synthetic')]
     monkeypatch.setattr(sys, 'argv', [module, *args, '--bronze-root', str(tmp_path / 'bronze'),
                         '--silver-root', str(tmp_path / 'silver'), '--reports-root', str(tmp_path / 'reports')])
     assert cli.main() == 1
