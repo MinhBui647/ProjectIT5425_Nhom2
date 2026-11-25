@@ -99,7 +99,7 @@ và các commit Silver trước đó vẫn được giữ. Đây không phải t
 Các hệ số defect, yield, flow và power được ghi tại
 [ground_truth.md](../../docs/ground_truth.md). Seed ngày đầu mặc định 5425;
 ngày sau tăng 1, seed 0 hợp lệ. Khi sinh tiếp bằng lệnh riêng, phải tăng seed
-đúng offset ngày. Bảo đảm tách seed được kiểm tra cho bộ 90 ngày và hai line;
+đúng offset ngày. Bảo đảm tách seed được kiểm tra cho bộ 180 ngày và hai line;
 không có bảo đảm seed duy nhất cho mọi khoảng ngày hoặc line tùy ý. Giá trị
 theo seed và phân phối MES đổi so với generator cũ, trong khi schema và lời gọi
 cũ được giữ. `_generated_at` tiếp tục dùng thời gian thực.
@@ -121,7 +121,7 @@ Verifier đọc từng file và giữ thống kê theo lô để kiểm checksum
 counts, batch IDs, chuỗi timestamp 1 Hz và farm mapping; PASS là nghiệm thu
 Bronze mô phỏng, chưa phải P3/Gold. `--seed` của verifier là thông tin khai báo,
 không được suy ngược từ Parquet. File report phải nằm ngoài Bronze và khác
-file mapping. Đổi `--days 90` ở cả hai lệnh để nghiệm thu bộ 720 lô.
+file mapping. Đổi `--days 180` ở cả hai lệnh để nghiệm thu bộ 1.440 lô.
 
 Bronze chỉ append; chạy lại cùng window không phải replay/dedup. Dùng namespace
 mới khi sinh lại cơ chế; không tự đổi nguồn Silver/Gold của nhóm. Gold hiện đọc

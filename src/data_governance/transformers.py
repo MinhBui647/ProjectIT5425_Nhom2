@@ -120,7 +120,7 @@ def _date_expr(df: pl.DataFrame, column: str) -> pl.Expr:
     dtype = df.schema[column]
     if dtype == pl.Date:
         return pl.col(column)
-    value = pl.col(column).cast(pl.String)
+    value = pl.col(column).cast(pl.String).str.slice(0, 10)
     return value.str.strptime(pl.Date, "%Y-%m-%d", strict=False).fill_null(
         (value + "-01").str.strptime(pl.Date, "%Y-%m-%d", strict=False)
     )

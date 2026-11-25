@@ -32,6 +32,9 @@ def _get_and_process_fao_sheet_data(download_link: str):
         # Update ten cot cua dataframe
         rename_dict = { old: new for old, new in zip(df.columns, headers)}
         df = df.rename(rename_dict)
+
+        # Keep Month as a plain date "YYYY-MM-DD" (the Excel sheet gives "2025-01-01 00:00:00")
+        df = df.with_columns(pl.col("Month").cast(pl.String).str.slice(0, 10))
         
         return df
     

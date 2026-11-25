@@ -1,0 +1,159 @@
+{
+  "run_id": "66c8607f-b3d0-4a97-9964-f960f26a632f",
+  "table_name": "mes_lims",
+  "contract_version": "v1",
+  "bronze": {
+    "absolute_path": "/w/data/01_bronze_vault/mes_lims/2025-06-25/mes_lims_20261124_162422_843774.parquet",
+    "sha256": "7bc95b59afb9655e719637273b2cef6c7971308276ed944a9012a4c8e9b024b3",
+    "table_name": "mes_lims",
+    "row_count": 4,
+    "source_timestamp": "2026-11-24T16:24:22.843774+00:00"
+  },
+  "started_at": "2026-11-24T20:53:49.770381+00:00",
+  "finished_at": "2026-11-24T20:53:50.688185+00:00",
+  "counts": {
+    "total": 4,
+    "valid": 4,
+    "rejected": 0
+  },
+  "error_ratio": 0.0,
+  "decision": {
+    "status": "PASS",
+    "error_ratio": 0.0,
+    "reason": "All rows passed quality checks",
+    "fail_threshold": 0.005,
+    "valid_row_count": 4,
+    "rejected_row_count": 0,
+    "hard_failure_count": 0
+  },
+  "hard_failures": [],
+  "rule_metrics": {
+    "mes_lims.non_empty.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "A governance batch must contain at least one row",
+      "passed": true,
+      "row_count": 4
+    },
+    "mes_lims.required_columns.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "All required canonical columns must exist",
+      "passed": true,
+      "required_columns": [
+        "batch_id",
+        "line_id",
+        "sku_id",
+        "batch_defect_flag"
+      ],
+      "missing_columns": []
+    },
+    "mes_lims.canonical_types.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "Canonical columns must use their v1 data types",
+      "passed": true,
+      "type_mismatches": {}
+    },
+    "mes.batch_id.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "batch_id must not be null",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.line_id.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "line_id must not be null",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.sku_id.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "sku_id must not be null",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.batch_defect_flag.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "batch_defect_flag must not be null",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.batch_id.unique.v1": {
+      "dimension": "uniqueness",
+      "severity": "ERROR",
+      "description": "Business key ('batch_id',) must be unique",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.production_time.order.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "production_end must not precede production_start",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.sku_id.category.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "sku_id must be a supported UHT SKU",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.microbiology_status.category.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "microbiology_status must be PASSED, FAILED, or PENDING",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.batch_defect_flag.category.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "batch_defect_flag must be 0 or 1",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.fat_in.range.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "fat_in must be between 0.0 and 100.0",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.protein_in.range.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "protein_in must be between 0.0 and 100.0",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    },
+    "mes.yield_recovery_pct.range.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "yield_recovery_pct must be between 0.0 and 100.0",
+      "failed_count": 0,
+      "passed_count": 4,
+      "failure_ratio": 0.0
+    }
+  },
+  "artifacts": {
+    "quarantine": null,
+    "quarantine_sha256": null
+  }
+}

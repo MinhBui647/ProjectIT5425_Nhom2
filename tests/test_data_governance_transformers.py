@@ -395,3 +395,23 @@ def test_dispatcher_supports_schema_alias_and_rejects_unknown_or_usda():
     with pytest.raises(ValueError, match="Unsupported Silver table 'market_reports'"):
         transform_bronze(pl.DataFrame(), "market_reports")
 
+
+def test_fao_transform_accepts_month_with_time_part():
+    # The FAO Excel sheet gives "2025-01-01 00:00:00"; all 36 rows used to be rejected.
+    wide_data = {
+        "Month": ["2025-01-01 00:00:00", "2025-02-01 00:00:00"],
+        "_created_at": ["2026-10-07", "2026-10-07"],
+        "_bronze_file": ["fao.parquet", "fao.parquet"],
+    }
+    for position, column in enumerate(FAO_WIDE_INDEX_COLUMNS):
+        wide_data[column] = [str(100 + position), str(110 + position)]
+
+    transformed = transform_market_indices(pl.DataFrame(wide_data))
+
+    assert transformed["period_start"].null_count() == 0
+    assert set(str(value) for value in transformed["period_start"].unique()) == {
+        "2025-01-01",
+        "2025-02-01",
+    }
+
+

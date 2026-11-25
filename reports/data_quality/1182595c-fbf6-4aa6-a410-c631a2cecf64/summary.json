@@ -1,0 +1,174 @@
+{
+  "run_id": "1182595c-fbf6-4aa6-a410-c631a2cecf64",
+  "table_name": "sensor_telemetry",
+  "contract_version": "v1",
+  "bronze": {
+    "absolute_path": "/w/data/01_bronze_vault/sensor_telemetry/2025-05-29/sensor_telemetry_20261124_162331_839528.parquet",
+    "sha256": "3120878525506a3ed1405dc2e365f3151e638b6109da0ad50de8f257277d33cd",
+    "table_name": "sensor_telemetry",
+    "row_count": 28800,
+    "source_timestamp": "2026-11-24T16:23:31.839528+00:00"
+  },
+  "started_at": "2026-11-24T20:23:55.607967+00:00",
+  "finished_at": "2026-11-24T20:24:02.075409+00:00",
+  "counts": {
+    "total": 28800,
+    "valid": 28800,
+    "rejected": 0
+  },
+  "error_ratio": 0.0,
+  "decision": {
+    "status": "PASS",
+    "error_ratio": 0.0,
+    "reason": "All rows passed quality checks",
+    "fail_threshold": 0.005,
+    "valid_row_count": 28800,
+    "rejected_row_count": 0,
+    "hard_failure_count": 0
+  },
+  "hard_failures": [],
+  "rule_metrics": {
+    "sensor_telemetry.non_empty.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "A governance batch must contain at least one row",
+      "passed": true,
+      "row_count": 28800
+    },
+    "sensor_telemetry.required_columns.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "All required canonical columns must exist",
+      "passed": true,
+      "required_columns": [
+        "timestamp",
+        "line_id",
+        "uht_temp"
+      ],
+      "missing_columns": []
+    },
+    "sensor_telemetry.canonical_types.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "Canonical columns must use their v1 data types",
+      "passed": true,
+      "type_mismatches": {}
+    },
+    "sensor.timestamp.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "timestamp must not be null",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.line_id.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "line_id must not be null",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.uht_temp.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "uht_temp must not be null",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.line_id_timestamp.unique.v1": {
+      "dimension": "uniqueness",
+      "severity": "ERROR",
+      "description": "Business key ('line_id', 'timestamp') must be unique",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.uht_temp.range.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "uht_temp must be between 135.0 and 145.0",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.homo_press_stage1.range.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "homo_press_stage1 must be between 150.0 and 250.0",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.homo_press_stage2.range.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "homo_press_stage2 must be between 20.0 and 60.0",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.flow_rate.positive.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "flow_rate must be positive when present",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.preheat_temp.null_ratio.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "preheat_temp null ratio must not exceed 1%",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.homo_press_stage1.null_ratio.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "homo_press_stage1 null ratio must not exceed 1%",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.homo_press_stage2.null_ratio.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "homo_press_stage2 null ratio must not exceed 1%",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.flow_rate.null_ratio.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "flow_rate null ratio must not exceed 1%",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.conductivity.null_ratio.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "conductivity null ratio must not exceed 1%",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    },
+    "sensor.power_kw.null_ratio.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "power_kw null ratio must not exceed 1%",
+      "failed_count": 0,
+      "passed_count": 28800,
+      "failure_ratio": 0.0
+    }
+  },
+  "artifacts": {
+    "quarantine": null,
+    "quarantine_sha256": null
+  }
+}

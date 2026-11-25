@@ -8,11 +8,11 @@ Giá trị trong code nằm ở hằng `GROUND_TRUTH`. Khi đổi hệ số, s�
 
 | Mục | Giá trị |
 |---|---|
-| Thời gian | 90 ngày, 2025-01-01 đến 2025-03-31 |
+| Thời gian | 180 ngày, 2025-01-01 đến 2025-06-29 |
 | Dây chuyền | `LINE_UHT_1`, `LINE_UHT_2` |
-| Lô | 4 lô mỗi ngày mỗi dây chuyền, 2 giờ mỗi lô, bắt đầu 08:00, 10:00, 12:00, 14:00 giờ VN. Tổng 720 lô |
+| Lô | 4 lô mỗi ngày mỗi dây chuyền, 2 giờ mỗi lô, bắt đầu 08:00, 10:00, 12:00, 14:00 giờ VN. Tổng 1.440 lô |
 | Cảm biến | 1 mẫu mỗi giây, 7.200 mẫu mỗi lô |
-| Seed | Với 90 ngày này: seed ngày = 5425 + d; seed lô = seed_ngày × 4 + i + 1.000.000 × chỉ số dây chuyền trong config. Cảm biến cộng 10.000.000, MES cộng 20.000.000 để dùng seed khác trong phạm vi này |
+| Seed | Với 180 ngày này: seed ngày = 5425 + d; seed lô = seed_ngày × 4 + i + 1.000.000 × chỉ số dây chuyền trong config. Cảm biến cộng 10.000.000, MES cộng 20.000.000 để dùng seed khác trong phạm vi này |
 
 ## Nguyên liệu (MES)
 
@@ -79,25 +79,25 @@ Ca (`shift_code`), sản phẩm (`sku_id`) và trang trại **không** ảnh hư
 
 ## Điều kiện nghiệm thu dữ liệu
 
-| Kiểm tra | Kết quả mong đợi | Kết quả khi sinh 90 ngày × 2 dây chuyền |
+| Kiểm tra | Kết quả mong đợi | Kết quả khi sinh 180 ngày × 2 dây chuyền |
 |---|---|---|
-| Số lô khác nhau | Bằng số lô | 720 / 720 |
-| Tương quan độ béo và UHT trung bình | Đối chiếu bộ seed cố định | −0,0470881682 |
-| Tỉ lệ lô lỗi | Đối chiếu mẫu cố định này; 4–6 % là tham khảo, không phải bảo đảm với mọi seed | 4,7 %, 34 lô lỗi |
-| Khóa lô và mapping | `batch_id` duy nhất; sensor IDs và mapping khớp MES | Đã đạt trên 720 lô từ file Bronze |
+| Số lô khác nhau | Bằng số lô | 1.440 / 1.440 |
+| Tương quan độ béo và UHT trung bình | Đối chiếu bộ seed cố định | −0,0174502032 |
+| Tỉ lệ lô lỗi | Đối chiếu mẫu cố định này; 4–6 % là tham khảo, không phải bảo đảm với mọi seed | 4,7 %, 68 lô lỗi |
+| Khóa lô và mapping | `batch_id` duy nhất; sensor IDs và mapping khớp MES | Đã đạt trên 1.440 lô từ file Bronze |
 
 ## Cách sinh lại
 
 ```bash
 export PYTHONPATH=src
 .venv/bin/python -m lakehouse_storage.generate_mes_data \
-  --date 2025-01-01 --days 90 --seed 5425 --write-bronze \
+  --date 2025-01-01 --days 180 --seed 5425 --write-bronze \
   --bronze-root data/mes_mechanism_v1/bronze \
   --output-dir data/mes_mechanism_v1/synthetic
 .venv/bin/python scripts/verify_mes_dataset.py \
   --bronze-root data/mes_mechanism_v1/bronze \
   --mapping-file data/mes_mechanism_v1/synthetic/batch_farm_map.json \
-  --start-date 2025-01-01 --days 90 --seed 5425 \
+  --start-date 2025-01-01 --days 180 --seed 5425 \
   --output reports/mes_generator/acceptance.json
 ```
 
@@ -109,6 +109,6 @@ Cả ba chế độ raw/Bronze/Delta lưu mapping tại `--output-dir`. Gold m�
 
 ## Evidence nghiệm thu 2026-11-24
 
-Đã đọc bộ Bronze thực tại `data/mes_generator/20261124T113349Z/`: **180 file cảm biến + 180 file MES, 360 checksum hợp lệ, 5.184.000 hàng sensor, 720 MES và 720 mapping khớp**. Có 720/720 bộ giá trị chất lượng khác nhau, 34 lô lỗi (4,7222%), corr(fat, UHT avg) = −0,0470881682. Thời gian sinh đo được khoảng 30 giây trong môi trường này; đây không phải cam kết hiệu năng cho máy khác.
+Đã đọc bộ Bronze thực tại `data/01_bronze_vault/`: **360 file cảm biến + 360 file MES, 720 checksum hợp lệ, 10.368.000 hàng sensor, 1.440 MES và 1.440 mapping khớp**. Có 1.440/1.440 bộ giá trị chất lượng khác nhau, 68 lô lỗi (4,7222%), corr(fat, UHT avg) = −0,0174502032. Thời gian sinh đo được khoảng 6 phút trong môi trường này; đây không phải cam kết hiệu năng cho máy khác.
 
-Report: [acceptance.json](../reports/mes_generator/20261124T113349Z/acceptance.json). Report ghi revision và SHA-256 của generator/verifier, seed khai báo, môi trường và phạm vi kiểm tra. PASS này chỉ áp dụng Bronze. [governed_sample.json](../reports/mes_generator/20261124T113349Z/governed_sample.json) ghi sample riêng một ngày hai line qua P3 vào local Delta; chưa nạp toàn bộ 90 ngày vào Silver và chưa nghiệm thu Gold/Airflow/MinIO.
+Report: [acceptance.json](../reports/mes_generator/20261124T163921Z/acceptance.json). Report ghi revision và SHA-256 của generator/verifier, seed khai báo, môi trường và phạm vi kiểm tra. PASS này chỉ áp dụng Bronze. [governed_sample.json](../reports/mes_generator/20261124T113349Z/governed_sample.json) ghi sample riêng một ngày hai line qua P3 vào local Delta; chưa nạp toàn bộ 180 ngày vào Silver và chưa nghiệm thu Gold/Airflow/MinIO.
