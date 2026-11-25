@@ -174,7 +174,7 @@ def test_spec_matches_task_document():
     sp = cfg.SPECS["uht_temp"]
     assert (sp.lsl, sp.usl, sp.mid) == (137.0, 142.0, 140.0)   # LSL 137, USL 142, Target 140
     assert cfg.SUBGROUP_SIZE == 60 and cfg.SUBGROUP_EVERY_S == 60  # nhóm con 1 phút, n = 60
-    assert cfg.PHASE1_MONTHS == (1,) and cfg.PHASE2_MONTHS == (2, 3)
+    assert cfg.PHASE1_MONTHS == (1,) and cfg.PHASE2_MONTHS == (2, 3, 4, 5, 6)
     assert cfg.CUSUM_K == 0.5 and cfg.CUSUM_H == 5.0 and cfg.EWMA_LAMBDA == 0.2 and cfg.EWMA_L == 3.0
 
 

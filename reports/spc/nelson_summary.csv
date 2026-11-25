@@ -1,33 +1,33 @@
 ﻿chart,phase,n_points,rule,description,observed,expected_false_alarms,ratio_obs_over_exp,poisson_p_ge_observed
-xbar_minute,I,14880,1,1 điểm vượt 3 sigma,582,40.62,14.327070778683682,0.0
-xbar_minute,I,14880,2,9 điểm liên tiếp cùng một phía đường tâm,3077,56.62,54.34629025193224,0.0
-xbar_minute,I,14880,3,6 điểm liên tiếp tăng hoặc giảm đều,31,40.47,0.7659313725490196,0.9465476430002858
-xbar_minute,I,14880,4,14 điểm liên tiếp lên xuống xen kẽ,76,73.42,1.0351696152655918,0.3969498613015484
-xbar_minute,I,14880,5,2/3 điểm vượt 2 sigma cùng phía,1050,32.08,32.729367406786764,0.0
-xbar_minute,I,14880,6,4/5 điểm vượt 1 sigma cùng phía,2387,66.69,35.79131340175517,0.0
-xbar_minute,I,14880,7,15 điểm liên tiếp trong vùng ±1 sigma,6,46.65,0.12862067191439008,0.9999999999999887
-xbar_minute,I,14880,8,8 điểm liên tiếp ngoài vùng ±1 sigma (cả hai phía),411,1.22,336.8410700236035,0.0
-xbar_minute,II,13920,1,1 điểm vượt 3 sigma,221,38.0,5.815544608648057,1.0250031302171755e-91
-xbar_minute,II,13920,2,9 điểm liên tiếp cùng một phía đường tâm,1733,52.97,32.71934991768242,0.0
-xbar_minute,II,13920,3,6 điểm liên tiếp tăng hoặc giảm đều,76,37.86,2.007268424611224,3.265946192372172e-08
-xbar_minute,II,13920,4,14 điểm liên tiếp lên xuống xen kẽ,42,68.68,0.611520344408258,0.9997847051793117
-xbar_minute,II,13920,5,2/3 điểm vượt 2 sigma cùng phía,425,30.01,14.161228754824815,0.0
-xbar_minute,II,13920,6,4/5 điểm vượt 1 sigma cùng phía,1285,62.39,20.596434268363364,0.0
-xbar_minute,II,13920,7,15 điểm liên tiếp trong vùng ±1 sigma,8,43.64,0.18332141744119965,0.9999999999920887
-xbar_minute,II,13920,8,8 điểm liên tiếp ngoài vùng ±1 sigma (cả hai phía),53,1.14,46.432576394729466,8.465313504824905e-68
-I_batch,I,124,1,1 điểm vượt 3 sigma,0,0.34,0.0,1.0
-I_batch,I,124,2,9 điểm liên tiếp cùng một phía đường tâm,4,0.47,8.477809334068077,0.0014200097766819148
-I_batch,I,124,3,6 điểm liên tiếp tăng hoặc giảm đều,0,0.34,0.0,1.0
-I_batch,I,124,4,14 điểm liên tiếp lên xuống xen kẽ,0,0.61,0.0,1.0
-I_batch,I,124,5,2/3 điểm vượt 2 sigma cùng phía,0,0.27,0.0,1.0
-I_batch,I,124,6,4/5 điểm vượt 1 sigma cùng phía,2,0.56,3.598623886225907,0.1075624016764024
-I_batch,I,124,7,15 điểm liên tiếp trong vùng ±1 sigma,9,0.39,23.151720944590213,3.940019429007064e-10
-I_batch,I,124,8,8 điểm liên tiếp ngoài vùng ±1 sigma (cả hai phía),0,0.01,0.0,1.0
-I_batch,II,116,1,1 điểm vượt 3 sigma,0,0.32,0.0,1.0
-I_batch,II,116,2,9 điểm liên tiếp cùng một phía đường tâm,8,0.44,18.12497167973175,2.415556557843065e-08
-I_batch,II,116,3,6 điểm liên tiếp tăng hoặc giảm đều,0,0.32,0.0,1.0
-I_batch,II,116,4,14 điểm liên tiếp lên xuống xen kẽ,0,0.57,0.0,1.0
-I_batch,II,116,5,2/3 điểm vượt 2 sigma cùng phía,0,0.25,0.0,1.0
-I_batch,II,116,6,4/5 điểm vượt 1 sigma cùng phía,2,0.52,3.8468048438966598,0.09630156293008148
-I_batch,II,116,7,15 điểm liên tiếp trong vùng ±1 sigma,16,0.36,43.997140185887915,3.1765308943250646e-21
-I_batch,II,116,8,8 điểm liên tiếp ngoài vùng ±1 sigma (cả hai phía),0,0.01,0.0,1.0
+xbar_minute,I,29760,1,1 điểm vượt 3 sigma,984,81.24,12.111544369608886,0.0
+xbar_minute,I,29760,2,9 điểm liên tiếp cùng một phía đường tâm,1987,113.24,17.54729911124299,0.0
+xbar_minute,I,29760,3,6 điểm liên tiếp tăng hoặc giảm đều,49,80.95,0.6053328589500315,0.9999476887898088
+xbar_minute,I,29760,4,14 điểm liên tiếp lên xuống xen kẽ,389,146.84,2.649216975909969,1.2258720622041869e-61
+xbar_minute,I,29760,5,2/3 điểm vượt 2 sigma cùng phía,1339,64.16,20.868868075089274,0.0
+xbar_minute,I,29760,6,4/5 điểm vượt 1 sigma cùng phía,1995,133.38,14.956780527126426,0.0
+xbar_minute,I,29760,7,15 điểm liên tiếp trong vùng ±1 sigma,8,93.3,0.08574711460959339,1.0
+xbar_minute,I,29760,8,8 điểm liên tiếp ngoài vùng ±1 sigma (cả hai phía),257,2.44,105.3140571728298,0.0
+xbar_minute,II,143040,1,1 điểm vượt 3 sigma,4444,390.5,11.380305004466079,0.0
+xbar_minute,II,143040,2,9 điểm liên tiếp cùng một phía đường tâm,8366,544.27,15.371126534907853,0.0
+xbar_minute,II,143040,3,6 điểm liên tiếp tăng hoặc giảm đều,290,389.07,0.7453694565074351,0.9999999358274976
+xbar_minute,II,143040,4,14 điểm liên tiếp lên xuống xen kẽ,1870,705.76,2.649628337908264,2.741281323766045e-288
+xbar_minute,II,143040,5,2/3 điểm vượt 2 sigma cùng phía,6007,308.39,19.478314510673094,0.0
+xbar_minute,II,143040,6,4/5 điểm vượt 1 sigma cùng phía,8548,641.11,13.333223522975821,0.0
+xbar_minute,II,143040,7,15 điểm liên tiếp trong vùng ±1 sigma,82,448.43,0.1828600380348879,1.0
+xbar_minute,II,143040,8,8 điểm liên tiếp ngoài vùng ±1 sigma (cả hai phía),1141,11.73,97.27792328258853,0.0
+I_batch,I,248,1,1 điểm vượt 3 sigma,5,0.68,7.385088030249321,0.0006775048979195239
+I_batch,I,248,2,9 điểm liên tiếp cùng một phía đường tâm,4,0.94,4.2389046670340385,0.01572536828729796
+I_batch,I,248,3,6 điểm liên tiếp tăng hoặc giảm đều,1,0.67,1.4824478178368121,0.49061950127381265
+I_batch,I,248,4,14 điểm liên tiếp lên xuống xen kẽ,0,1.22,0.0,1.0
+I_batch,I,248,5,2/3 điểm vượt 2 sigma cùng phía,1,0.53,1.8702495661021008,0.4141479525280205
+I_batch,I,248,6,4/5 điểm vượt 1 sigma cùng phía,4,1.11,3.598623886225907,0.026602152869751
+I_batch,I,248,7,15 điểm liên tiếp trong vùng ±1 sigma,0,0.78,0.0,1.0
+I_batch,I,248,8,8 điểm liên tiếp ngoài vùng ±1 sigma (cả hai phía),0,0.02,0.0,1.0
+I_batch,II,1192,1,1 điểm vượt 3 sigma,10,3.25,3.0729896501708587,0.0019867022780746747
+I_batch,II,1192,2,9 điểm liên tiếp cùng một phía đường tâm,9,4.54,1.9843194666149278,0.0419276320068358
+I_batch,II,1192,3,6 điểm liên tiếp tăng hoặc giảm đều,5,3.24,1.5421437031188314,0.22694911304100884
+I_batch,II,1192,4,14 điểm liên tiếp lên xuống xen kẽ,3,5.88,0.5100888778860829,0.9325219982040702
+I_batch,II,1192,5,2/3 điểm vượt 2 sigma cùng phía,6,2.57,2.334673954999938,0.046858047156536915
+I_batch,II,1192,6,4/5 điểm vượt 1 sigma cùng phía,12,5.34,2.246120949120868,0.008913250670876642
+I_batch,II,1192,7,15 điểm liên tiếp trong vùng ±1 sigma,0,3.74,0.0,1.0
+I_batch,II,1192,8,8 điểm liên tiếp ngoài vùng ±1 sigma (cả hai phía),0,0.1,0.0,1.0

@@ -22,7 +22,7 @@ Thư viện: numpy, pandas, scipy, matplotlib; thêm pyarrow để đọc Parque
 |---|---|---|
 | Phạm vi: chỉ năm 2025 có batch_key | run_spc.filter_scope | |
 | 1. EDA, histogram + Q-Q, ngoại lai ±3σ và IQR, boxplot theo nhóm | eda.py, figures.py | eda_summary.csv, fig01, fig02 |
-| 2. X̄–S theo phút (n=60), I–MR theo lô, Phase I = tháng 1, Phase II = tháng 2–3 | spc_charts.py | spc_limits.json, fig03, fig04 |
+| 2. X̄–S theo phút (n=60), I–MR theo lô, Phase I = tháng 1, Phase II = tháng 2–6 | spc_charts.py | spc_limits.json, fig03, fig04 |
 | 3. CUSUM (k=0,5σ, h=5σ) và EWMA (λ=0,2, L=3) trên trung bình lô | spc_charts.py | fig05, fig06, spc_series_batch.csv |
 | 4. 8 quy tắc Nelson trên X̄ và I; so với báo động giả kỳ vọng | nelson_rules.py | nelson_violations.csv, nelson_summary.csv |
 | 5. Cp, Cpk, Cpm, Pp, Ppk (LSL 137, USL 142, Target 140; đạt khi Cpk ≥ 1,33) | capability.py | capability.csv, fig07 |
@@ -38,7 +38,7 @@ correlation_pearson*.csv, correlation_target.csv, correlation_thi.csv, thi_heat_
 - TV7: spc_limits.json, nelson_violations.csv, spc_series.csv, spc_series_batch.csv, capability.csv.
 
 ## Lưu ý khi đọc kết quả
-- Giới hạn Phase I tính từ tháng 01/2025, giám sát tháng 02–03. Giới hạn X̄ theo phút (n=60) rất hẹp vì chỉ chứa biến thiên
+- Giới hạn Phase I tính từ tháng 01/2025, giám sát tháng 02–06. Giới hạn X̄ theo phút (n=60) rất hẹp vì chỉ chứa biến thiên
   trong một phút; biến thiên giữa các lô và tự tương quan nằm ngoài nên X̄ theo phút báo vi phạm nhiều hơn hẳn I–MR (I–MR dùng
   MR̄/d2, đã bao gồm biến thiên giữa các lô). Đây chính là điểm tài liệu yêu cầu giải thích.
 - nelson_summary.csv: với biểu đồ I theo lô chỉ có vài trăm điểm nên số kỳ vọng thường < 1, tỉ lệ quan sát/kỳ vọng dao động mạnh;
