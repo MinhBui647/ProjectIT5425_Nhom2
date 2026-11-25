@@ -36,7 +36,7 @@ YEAR = 2025             # chỉ dùng dữ liệu năm 2025 có batch_key
 SUBGROUP_SIZE = 60      # nhóm con 1 phút: 60 mẫu 1 Hz (theo tài liệu)
 SUBGROUP_EVERY_S = 60   # mỗi phút một nhóm con
 PHASE1_MONTHS = (1,)    # Phase I: tháng 01/2025 để ước lượng giới hạn
-PHASE2_MONTHS = (2, 3)  # Phase II: tháng 02–03/2025 để giám sát
+PHASE2_MONTHS = (2, 3, 4, 5, 6)  # Phase II: tháng 02–06/2025 để giám sát
 # hằng số biểu đồ I-MR (cửa sổ 2 điểm)
 D2_N2 = 1.128
 D4_N2 = 3.267
