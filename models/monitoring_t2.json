@@ -1,0 +1,228 @@
+{
+  "model": "Hotelling T² = (x − µ)ᵀ Σ⁻¹ (x − µ) trên trung bình 1 phút của 7 cảm biến; µ, Σ học bằng EM",
+  "variables": [
+    "uht_temp",
+    "preheat_temp",
+    "homo_press_stage1",
+    "homo_press_stage2",
+    "flow_rate",
+    "conductivity",
+    "power_kw"
+  ],
+  "alpha": 0.0027,
+  "limit_chi2_full": 21.84639107125362,
+  "rule_lo_can_kiem_tra": {
+    "k": 2,
+    "mo_ta": "≥ 2 phút T² vượt ngưỡng thì cần kiểm tra; k chọn trên Phase I",
+    "khi_mat_cam_bien": "T² tính trên các cảm biến còn đo được"
+  },
+  "mu_original": {
+    "uht_temp": 140.00698198760296,
+    "preheat_temp": 80.00798581872283,
+    "homo_press_stage1": 180.00571820749403,
+    "homo_press_stage2": 40.00659637316472,
+    "flow_rate": 4992.08970533468,
+    "conductivity": 4.800810521571649,
+    "power_kw": 75.15718715931736
+  },
+  "sigma_original": [
+    [
+      0.021033204166871267,
+      0.010331360419324108,
+      0.009913874181273317,
+      0.010224174675076862,
+      0.9341630922649676,
+      0.0010313634252635282,
+      0.0385821088689893
+    ],
+    [
+      0.010331360419324108,
+      0.014485194306008503,
+      0.010111559945548841,
+      0.010229351348752119,
+      0.9605860569954918,
+      0.0010306425979187024,
+      0.041619039234769645
+    ],
+    [
+      0.009913874181273317,
+      0.010111559945548841,
+      0.15830659564878105,
+      0.009936876294836245,
+      1.0599864105413876,
+      0.0010518130374886098,
+      0.03928293562161252
+    ],
+    [
+      0.010224174675076862,
+      0.010229351348752119,
+      0.009936876294836245,
+      0.026829259162014188,
+      0.8740995462304276,
+      0.0010280962086055294,
+      0.03970951721906603
+    ],
+    [
+      0.9341630922649676,
+      0.9605860569954918,
+      1.0599864105413876,
+      0.8740995462304276,
+      21836.050127826016,
+      0.07700709825969564,
+      218.10532447655044
+    ],
+    [
+      0.0010313634252635282,
+      0.0010306425979187024,
+      0.0010518130374886098,
+      0.0010280962086055294,
+      0.07700709825969564,
+      0.00026912686203250474,
+      0.003787450081452725
+    ],
+    [
+      0.0385821088689893,
+      0.041619039234769645,
+      0.03928293562161252,
+      0.03970951721906603,
+      218.10532447655044,
+      0.003787450081452725,
+      6.501932316946606
+    ]
+  ],
+  "train_phase1": {
+    "months": [
+      1
+    ],
+    "n_batches": 236,
+    "n_minutes": 28320,
+    "n_defect_batches_excluded": 12,
+    "em_n_iter": 2,
+    "ti_le_lo_gan_co": 0.0211864406779661
+  },
+  "validate_phase2": {
+    "n_batches": 1192,
+    "n_minutes": 143040,
+    "n_defect_batches": 56,
+    "n_signals": 367,
+    "top_sensor_counts": {
+      "flow_rate": 91,
+      "preheat_temp": 72,
+      "uht_temp": 64,
+      "homo_press_stage2": 51,
+      "conductivity": 49,
+      "homo_press_stage1": 40
+    },
+    "n_lo_can_kiem_tra": 46
+  },
+  "validation": {
+    "minute_level": [
+      {
+        "phuong_phap": "Hotelling T²",
+        "tap": "Phase I (train), lô đạt",
+        "so_phut": 28320,
+        "ti_le_bao_dong": 0.0015536723,
+        "ky_vong_alpha": 0.0027
+      },
+      {
+        "phuong_phap": "3 sigma từng cảm biến",
+        "tap": "Phase I (train), lô đạt",
+        "so_phut": 28320,
+        "ti_le_bao_dong": 0.0151836158,
+        "ky_vong_alpha": null
+      },
+      {
+        "phuong_phap": "Hotelling T²",
+        "tap": "Phase II, lô đạt",
+        "so_phut": 136320,
+        "ti_le_bao_dong": 0.0025821596,
+        "ky_vong_alpha": 0.0027
+      },
+      {
+        "phuong_phap": "3 sigma từng cảm biến",
+        "tap": "Phase II, lô đạt",
+        "so_phut": 136320,
+        "ti_le_bao_dong": 0.0164686033,
+        "ky_vong_alpha": null
+      },
+      {
+        "phuong_phap": "Hotelling T²",
+        "tap": "Phase II, lô lỗi",
+        "so_phut": 6720,
+        "ti_le_bao_dong": 0.0022321429,
+        "ky_vong_alpha": 0.0027
+      },
+      {
+        "phuong_phap": "3 sigma từng cảm biến",
+        "tap": "Phase II, lô lỗi",
+        "so_phut": 6720,
+        "ti_le_bao_dong": 0.0147321429,
+        "ky_vong_alpha": null
+      }
+    ],
+    "batch_level": [
+      {
+        "phuong_phap": "Hotelling T²",
+        "k": 2,
+        "ti_le_gan_co_lo_dat": 0.0396126761,
+        "ti_le_gan_co_lo_loi": 0.0178571429,
+        "auc_so_phut_bao_dong_vs_co_loi": 0.5005580357
+      },
+      {
+        "phuong_phap": "3 sigma từng cảm biến",
+        "k": 7,
+        "ti_le_gan_co_lo_dat": 0.0475352113,
+        "ti_le_gan_co_lo_loi": 0.0357142857,
+        "auc_so_phut_bao_dong_vs_co_loi": 0.5282790493
+      }
+    ],
+    "outage": {
+      "so_phut_thieu_cam_bien": 26942,
+      "ti_le_bao_dong_phut_thieu": 0.0025239403162348748,
+      "ti_le_bao_dong_toan_bo": 0.002545481220657277,
+      "ky_vong": 0.0027
+    },
+    "fault_injection": [
+      {
+        "kich_ban": "uht_temp −2 sd (lệch 1 cảm biến)",
+        "phuong_phap": "Hotelling T²",
+        "k": 2,
+        "ti_le_bat_phut_loi": 0.1056924883,
+        "ti_le_bat_lo_loi": 0.4595070423,
+        "so_lo": 1136
+      },
+      {
+        "kich_ban": "uht_temp −2 sd (lệch 1 cảm biến)",
+        "phuong_phap": "3 sigma từng cảm biến",
+        "k": 7,
+        "ti_le_bat_phut_loi": 0.1750586854,
+        "ti_le_bat_lo_loi": 0.1822183099,
+        "so_lo": 1136
+      },
+      {
+        "kich_ban": "uht_temp +2 sd, preheat_temp −2 sd (tổ hợp lạ, tương quan 0.59)",
+        "phuong_phap": "Hotelling T²",
+        "k": 2,
+        "ti_le_bat_phut_loi": 0.6906103286,
+        "ti_le_bat_lo_loi": 1.0,
+        "so_lo": 1136
+      },
+      {
+        "kich_ban": "uht_temp +2 sd, preheat_temp −2 sd (tổ hợp lạ, tương quan 0.59)",
+        "phuong_phap": "3 sigma từng cảm biến",
+        "k": 7,
+        "ti_le_bat_phut_loi": 0.3154929577,
+        "ti_le_bat_lo_loi": 0.2992957746,
+        "so_lo": 1136
+      }
+    ],
+    "simulation": {
+      "false_alarm_rate": 0.00285,
+      "expected": 0.0027,
+      "scenario": "uht_temp +2 sd và preheat_temp −2 sd (tương quan 0.59)",
+      "t2_detection_rate": 0.6794,
+      "univariate_3sigma_detection_rate": 0.3189
+    }
+  },
+  "usage": "hotelling.t2_scores(X, mu, sigma); gắn cờ lô khi số phút signal ≥ k"
+}

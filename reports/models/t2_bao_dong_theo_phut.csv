@@ -1,0 +1,7 @@
+﻿phuong_phap,tap,so_phut,ti_le_bao_dong,ky_vong_alpha
+Hotelling T²,"Phase I (train), lô đạt",28320,0.0015536723163841809,0.0027
+3 sigma từng cảm biến,"Phase I (train), lô đạt",28320,0.01518361581920904,
+Hotelling T²,"Phase II, lô đạt",136320,0.0025821596244131454,0.0027
+3 sigma từng cảm biến,"Phase II, lô đạt",136320,0.016468603286384977,
+Hotelling T²,"Phase II, lô lỗi",6720,0.002232142857142857,0.0027
+3 sigma từng cảm biến,"Phase II, lô lỗi",6720,0.014732142857142857,

@@ -1,0 +1,5 @@
+﻿kich_ban,phuong_phap,k,ti_le_bat_phut_loi,ti_le_bat_lo_loi,so_lo
+uht_temp −2 sd (lệch 1 cảm biến),Hotelling T²,2,0.10569248826291079,0.4595070422535211,1136
+uht_temp −2 sd (lệch 1 cảm biến),3 sigma từng cảm biến,7,0.1750586854460094,0.18221830985915494,1136
+"uht_temp +2 sd, preheat_temp −2 sd (tổ hợp lạ, tương quan 0.59)",Hotelling T²,2,0.6906103286384977,1.0,1136
+"uht_temp +2 sd, preheat_temp −2 sd (tổ hợp lạ, tương quan 0.59)",3 sigma từng cảm biến,7,0.3154929577464789,0.2992957746478873,1136

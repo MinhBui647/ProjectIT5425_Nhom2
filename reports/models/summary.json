@@ -1,206 +1,179 @@
 {
-  "bai1_yield": {
-    "features": [
-      "protein_in",
-      "acidity_sh",
-      "uht_temp_std",
-      "uht_temp_min",
-      "uht_temp_max",
-      "flow_rate_avg",
-      "n_anomalies",
-      "homo_press1_avg",
-      "day_of_week",
-      "humidity_avg_pct",
-      "thi_index",
-      "is_heat_stress",
-      "gdt_smp_usd"
-    ],
-    "dropped": [],
-    "r2_ols_doc_lap": 0.10586687815485107,
-    "r2_ols_cluster": 0.0969230779513649,
-    "cv": {
-      "OLS_63_group": {
-        "r2_cv": -0.6228,
-        "r2_cv_sd": 0.1364,
-        "mse_cv": 9.0572
-      },
-      "OLS_240_group": {
-        "r2_cv": -0.5203,
-        "r2_cv_sd": 0.1442,
-        "mse_cv": 8.811
-      },
-      "ElasticNet_63_group": {
-        "r2_cv": -0.0621,
-        "r2_cv_sd": 0.0308,
-        "mse_cv": 5.9279
-      },
-      "ElasticNet_240_group": {
-        "r2_cv": -0.0573,
-        "r2_cv_sd": 0.026,
-        "mse_cv": 6.1277
-      },
-      "ElasticNet_240_kfold": {
-        "r2_cv": -0.0062,
-        "r2_cv_sd": 0.0246,
-        "mse_cv": 5.8313
-      }
+  "so_phut": 172800,
+  "so_lo": 1440,
+  "bai1_giam_sat": {
+    "train_phase1": {
+      "months": [
+        1
+      ],
+      "n_batches": 236,
+      "n_minutes": 28320,
+      "n_defect_batches_excluded": 12,
+      "em_n_iter": 2,
+      "ti_le_lo_gan_co": 0.0211864406779661
     },
-    "mse_elasticnet_trong_mau": 5.795579878636632,
-    "elasticnet": {
-      "alpha": 3.599045653108868,
-      "l1_ratio": 0.1,
-      "so_bien_giu_lai": 0
-    }
-  },
-  "bai2_defect": {
-    "features": [
-      "uht_temp_min",
-      "flow_rate_avg"
-    ],
-    "metrics": [
+    "validate_phase2": {
+      "n_batches": 1192,
+      "n_minutes": 143040,
+      "n_defect_batches": 56,
+      "n_signals": 367,
+      "top_sensor_counts": {
+        "flow_rate": 91,
+        "preheat_temp": 72,
+        "uht_temp": 64,
+        "homo_press_stage2": 51,
+        "conductivity": 49,
+        "homo_press_stage1": 40
+      },
+      "n_lo_can_kiem_tra": 46
+    },
+    "k": 2,
+    "k_3sigma": 7,
+    "bao_dong_gia_theo_phut": {
+      "Hotelling T² | Phase I (train), lô đạt": 0.00155,
+      "3 sigma từng cảm biến | Phase I (train), lô đạt": 0.01518,
+      "Hotelling T² | Phase II, lô đạt": 0.00258,
+      "3 sigma từng cảm biến | Phase II, lô đạt": 0.01647,
+      "Hotelling T² | Phase II, lô lỗi": 0.00223,
+      "3 sigma từng cảm biến | Phase II, lô lỗi": 0.01473
+    },
+    "gan_co_lo": [
       {
-        "sample": "240_lo_cluster",
-        "scope": "in_sample",
-        "auc": 0.8625730994,
-        "auc_cv_mean": null,
-        "auc_cv_sd": null,
-        "threshold_youden": 0.0869887261,
-        "sensitivity": 1.0,
-        "specificity": 0.850877193,
-        "hl_p_value": 7.19e-08
+        "phuong_phap": "Hotelling T²",
+        "k": 2,
+        "ti_le_gan_co_lo_dat": 0.0396126761,
+        "ti_le_gan_co_lo_loi": 0.0178571429,
+        "auc_so_phut_bao_dong_vs_co_loi": 0.5005580357
       },
       {
-        "sample": "240_lo_cluster",
-        "scope": "oof_stratified_group_kfold",
-        "auc": 0.8157894737,
-        "auc_cv_mean": 0.8403508772,
-        "auc_cv_sd": 0.0204260225,
-        "threshold_youden": 0.0485330216,
-        "sensitivity": 1.0,
-        "specificity": 0.7105263158,
-        "hl_p_value": 0.000125872
-      },
-      {
-        "sample": "63_lo_doc_lap",
-        "scope": "in_sample",
-        "auc": 0.8722222222,
-        "auc_cv_mean": null,
-        "auc_cv_sd": null,
-        "threshold_youden": 0.0793576791,
-        "sensitivity": 1.0,
-        "specificity": 0.85,
-        "hl_p_value": 0.1214904932
-      },
-      {
-        "sample": "63_lo_doc_lap",
-        "scope": "oof_stratified_group_kfold",
-        "auc": 0.8722222222,
-        "auc_cv_mean": 0.8455555556,
-        "auc_cv_sd": 0.0177430216,
-        "threshold_youden": 0.0608208836,
-        "sensitivity": 1.0,
-        "specificity": 0.8,
-        "hl_p_value": 0.9625157958
+        "phuong_phap": "3 sigma từng cảm biến",
+        "k": 7,
+        "ti_le_gan_co_lo_dat": 0.0475352113,
+        "ti_le_gan_co_lo_loi": 0.0357142857,
+        "auc_so_phut_bao_dong_vs_co_loi": 0.5282790493
       }
     ],
-    "odds_ratio_per_sd": [
+    "khi_mat_cam_bien": {
+      "so_phut_thieu_cam_bien": 26942,
+      "ti_le_bao_dong_phut_thieu": 0.0025239403162348748,
+      "ti_le_bao_dong_toan_bo": 0.002545481220657277,
+      "ky_vong": 0.0027
+    },
+    "loi_gia_lap": [
       {
-        "model": "240_lo_cluster (SE cluster)",
-        "term": "const",
-        "or_per_sd": 0.0218935926,
-        "or_per_sd_ci_low": 0.0066878775,
-        "or_per_sd_ci_high": 0.0716713781,
-        "p_value": 3e-10
+        "kich_ban": "uht_temp −2 sd (lệch 1 cảm biến)",
+        "phuong_phap": "Hotelling T²",
+        "ti_le_bat_phut_loi": 0.1056924883,
+        "ti_le_bat_lo_loi": 0.4595070423
       },
       {
-        "model": "240_lo_cluster (SE cluster)",
-        "term": "uht_temp_min",
-        "or_per_sd": 3.8511042575,
-        "or_per_sd_ci_low": 1.2717836012,
-        "or_per_sd_ci_high": 11.6615782651,
-        "p_value": 0.017066515
+        "kich_ban": "uht_temp −2 sd (lệch 1 cảm biến)",
+        "phuong_phap": "3 sigma từng cảm biến",
+        "ti_le_bat_phut_loi": 0.1750586854,
+        "ti_le_bat_lo_loi": 0.1822183099
       },
       {
-        "model": "240_lo_cluster (SE cluster)",
-        "term": "flow_rate_avg",
-        "or_per_sd": 1.996763645,
-        "or_per_sd_ci_low": 1.0325046409,
-        "or_per_sd_ci_high": 3.86154686,
-        "p_value": 0.0398769018
+        "kich_ban": "uht_temp +2 sd, preheat_temp −2 sd (tổ hợp lạ, tương quan 0.59)",
+        "phuong_phap": "Hotelling T²",
+        "ti_le_bat_phut_loi": 0.6906103286,
+        "ti_le_bat_lo_loi": 1.0
       },
       {
-        "model": "63_lo_doc_lap (SE MLE)",
-        "term": "const",
-        "or_per_sd": 0.0222768709,
-        "or_per_sd_ci_low": 0.003080268,
-        "or_per_sd_ci_high": 0.1611090239,
-        "p_value": 0.0001642287
+        "kich_ban": "uht_temp +2 sd, preheat_temp −2 sd (tổ hợp lạ, tương quan 0.59)",
+        "phuong_phap": "3 sigma từng cảm biến",
+        "ti_le_bat_phut_loi": 0.3154929577,
+        "ti_le_bat_lo_loi": 0.2992957746
+      }
+    ],
+    "mo_phong": {
+      "false_alarm_rate": 0.00285,
+      "expected": 0.0027,
+      "scenario": "uht_temp +2 sd và preheat_temp −2 sd (tương quan 0.59)",
+      "t2_detection_rate": 0.6794,
+      "univariate_3sigma_detection_rate": 0.3189
+    },
+    "lo_can_kiem_tra_top5": [
+      {
+        "batch_id": "BATCH_20250213_03_LINE_UHT_1",
+        "n_signals": 56,
+        "cam_bien_gop_nhieu_nhat": "flow_rate",
+        "batch_defect_flag": 0.0
       },
       {
-        "model": "63_lo_doc_lap (SE MLE)",
-        "term": "uht_temp_min",
-        "or_per_sd": 3.5999303708,
-        "or_per_sd_ci_low": 0.6419376393,
-        "or_per_sd_ci_high": 20.1880959796,
-        "p_value": 0.1453698177
+        "batch_id": "BATCH_20250227_03_LINE_UHT_1",
+        "n_signals": 16,
+        "cam_bien_gop_nhieu_nhat": "preheat_temp",
+        "batch_defect_flag": 0.0
       },
       {
-        "model": "63_lo_doc_lap (SE MLE)",
-        "term": "flow_rate_avg",
-        "or_per_sd": 1.8695592879,
-        "or_per_sd_ci_low": 0.4935154225,
-        "or_per_sd_ci_high": 7.0823560345,
-        "p_value": 0.3571792796
+        "batch_id": "BATCH_20250303_02_LINE_UHT_1",
+        "n_signals": 14,
+        "cam_bien_gop_nhieu_nhat": "preheat_temp",
+        "batch_defect_flag": 0.0
+      },
+      {
+        "batch_id": "BATCH_20250320_03_LINE_UHT_1",
+        "n_signals": 13,
+        "cam_bien_gop_nhieu_nhat": "uht_temp",
+        "batch_defect_flag": 0.0
+      },
+      {
+        "batch_id": "BATCH_20250528_04_LINE_UHT_2",
+        "n_signals": 9,
+        "cam_bien_gop_nhieu_nhat": "preheat_temp",
+        "batch_defect_flag": 0.0
       }
     ]
   },
-  "so_phut": 28800,
-  "bai3_em": {
+  "bai2_dien_du_lieu_thieu": {
     "chia": {
-      "n_batches_train": 192,
-      "n_batches_valid": 48,
+      "n_batches_train": 1074,
+      "n_batches_valid": 288,
       "n_rows_train": 3000,
-      "n_rows_valid": 5760,
+      "n_rows_valid": 34560,
       "batch_overlap": 0
     },
     "train": {
-      "EM": 0.9204,
-      "trung_binh": 1.0179,
-      "giam_rmse_pct": 9.5816,
+      "EM": 0.865,
+      "trung_binh": 1.0388,
+      "giam_rmse_pct": 16.7277,
       "noi_suy_thoi_gian": null,
       "so_o_bi_xoa": 2140,
       "mo_ta": "train (MCAR 10 %)"
     },
     "valid_mcar": {
-      "EM": 0.8985,
-      "trung_binh": 1.0358,
-      "giam_rmse_pct": 13.2536,
-      "noi_suy_thoi_gian": 1.0696,
-      "so_o_bi_xoa": 4127,
+      "EM": 0.8551,
+      "trung_binh": 1.0007,
+      "giam_rmse_pct": 14.5473,
+      "noi_suy_thoi_gian": 0.8095,
+      "so_o_bi_xoa": 24147,
       "mo_ta": "valid, MCAR 10 %"
     },
     "valid_mat_tin_hieu": {
-      "EM": 0.8903,
-      "trung_binh": 1.0722,
-      "giam_rmse_pct": 16.9612,
-      "noi_suy_thoi_gian": 1.0557,
-      "so_o_bi_xoa": 1203,
+      "EM": 0.8431,
+      "trung_binh": 1.008,
+      "giam_rmse_pct": 16.3602,
+      "noi_suy_thoi_gian": 0.862,
+      "so_o_bi_xoa": 7211,
       "mo_ta": "valid, mỗi lô 2 cảm biến mất liền 10–15 phút"
     },
     "n_iter": 6,
-    "loglik_khong_giam": true
-  },
-  "chuan_bi": {
-    "n_batches": 240,
-    "n_groups": 63,
-    "n_defect_batches": 12,
-    "n_defect_groups": 3,
-    "group_size_counts": {
-      "1": 2,
-      "2": 2,
-      "3": 2,
-      "4": 57
+    "loglik_khong_giam": true,
+    "dai_95_chua_gia_tri_that": {
+      "valid_mcar": 0.9529,
+      "valid_mat_tin_hieu": 0.9495
+    },
+    "cam_bien_nen_noi_suy_khi_co_tin_hieu_lai": [
+      "flow_rate",
+      "power_kw",
+      "preheat_temp"
+    ],
+    "giu_lo_khi_mat_uht": {
+      "so_lo_giu": 86,
+      "so_lo_valid": 288,
+      "so_lo_mat_uht": 86,
+      "quy_tac": "mất uht_temp > 5 phút thì giữ lô"
     }
   },
-  "thoi_gian_s": 15.5
+  "thoi_gian_s": 8.6
 }
