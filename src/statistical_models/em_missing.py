@@ -1,4 +1,4 @@
-"""Bài 3: EM cho phân phối chuẩn nhiều chiều N(µ, Σ) với dữ liệu cảm biến bị khuyết.
+"""Bài 2: EM cho phân phối chuẩn nhiều chiều N(µ, Σ) với dữ liệu cảm biến bị khuyết.
 
 E-step: x̂_m = µ_m + Σ_mo Σ_oo⁻¹ (x_o − µ_o),   C_i[m, m] = Σ_mm − Σ_mo Σ_oo⁻¹ Σ_om
 M-step: µ̂ = (1/n) Σ_i x̂_i,                    Σ̂ = (1/n) [Σ_i (x̂_i − µ̂)(x̂_i − µ̂)ᵀ + Σ_i C_i]
@@ -236,7 +236,7 @@ def run_em_experiment(minutes: pd.DataFrame, cols: tuple[str, ...] = cfg.SENSOR_
 
 
 def fit_final(minutes: pd.DataFrame, cols: tuple[str, ...] = cfg.SENSOR_VARS) -> dict:
-    """Sau khi validate: học µ, Σ trên TOÀN BỘ dữ liệu phút để bàn giao (giống Bài 1, 2 học lại trên toàn bộ dữ liệu).
+    """Sau khi validate: học µ, Σ trên TOÀN BỘ dữ liệu phút để bàn giao.
 
     Gold hiện không có ô khuyết nên EM dừng ngay ở trung bình/hiệp phương sai mẫu (đúng là MLE của dữ liệu đầy đủ);
     nếu sau này Gold có ô khuyết thì hàm vẫn chạy EM đầy đủ."""
@@ -248,3 +248,53 @@ def fit_final(minutes: pd.DataFrame, cols: tuple[str, ...] = cfg.SENSOR_VARS) ->
     return {"cols": cols, "z_mean": mean, "z_sd": sd, "em": em, "n_rows": int(len(X)),
             "n_missing_cells": int(np.isnan(X).sum()),
             "mu": em.mu * sd + mean, "sigma": em.sigma * np.outer(sd, sd)}
+
+def conditional_impute_sd(X_nan: np.ndarray, mu: np.ndarray, sigma: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Như conditional_impute, kèm độ lệch chuẩn có điều kiện của từng ô được điền (ô đo được có sd = 0).
+
+    Var(x_m | x_o) = Σ_mm − Σ_mo Σ_oo⁻¹ Σ_om. Web vẽ dải ±1,96 sd quanh giá trị điền."""
+    X = np.asarray(X_nan, float)
+    miss = np.isnan(X)
+    out, sd = X.copy(), np.zeros_like(X)
+    for rows in _patterns(miss).values():
+        m = miss[rows[0]]
+        if not m.any():
+            continue
+        o = ~m
+        if not o.any():
+            out[rows], sd[rows] = mu, np.sqrt(np.diag(sigma))
+            continue
+        K = np.linalg.solve(sigma[np.ix_(o, o)], sigma[np.ix_(m, o)].T).T
+        out[np.ix_(rows, m)] = mu[m] + (X[np.ix_(rows, o)] - mu[o]) @ K.T
+        cond = sigma[np.ix_(m, m)] - K @ sigma[np.ix_(o, m)]
+        sd[np.ix_(rows, m)] = np.sqrt(np.clip(np.diag(cond), 0, None))
+    return out, sd
+
+def band_coverage(truth: np.ndarray, X_nan: np.ndarray, mu: np.ndarray, sigma: np.ndarray, z: float = 1.96) -> float:
+    """Tỉ lệ ô bị xóa có giá trị thật nằm trong dải điền ±z·sd (dải 95 % đúng thì phải gần 0,95)."""
+    filled, sd = conditional_impute_sd(X_nan, mu, sigma)
+    m = np.isnan(np.asarray(X_nan, float))
+    return float(np.mean(np.abs(truth[m] - filled[m]) <= z * sd[m]))
+
+def choose_fill_method(rmse_z: pd.DataFrame, scenario: str = "valid_mat_tin_hieu") -> dict:
+    """Cách điền cho từng cảm biến, theo RMSE ở kịch bản mất tín hiệu trên các lô chưa thấy.
+    Đang mất (chưa có số đo sau đoạn mất): chỉ EM dùng được, vì nội suy cần điểm ở cả hai đầu.
+    Sau khi có tín hiệu lại: chọn EM hoặc nội suy trong lô, cách nào sai số nhỏ hơn."""
+    t = rmse_z[(rmse_z["tap"] == scenario) & (rmse_z["bien"] != "TOAN_BO")]
+    out = {}
+    for r in t.itertuples():
+        after = "noi_suy" if r.noi_suy_thoi_gian < r.EM else "EM"
+        out[r.bien] = {"khi_dang_mat": "EM", "sau_khi_co_tin_hieu_lai": after,
+                       "rmse_z_EM": float(r.EM), "rmse_z_noi_suy": float(r.noi_suy_thoi_gian),
+                       "rmse_z_trung_binh": float(r.trung_binh)}
+    return out
+
+def outage_action(sensor: str, minutes_missing: int, hold_sensor: str = cfg.EM_HOLD_SENSOR,
+                  max_minutes: int = cfg.EM_HOLD_MAX_MINUTES) -> dict:
+    """Quy tắc nghiệp vụ: mất nhiệt UHT quá lâu thì giữ lô; cảm biến khác thì điền và đánh dấu lô."""
+    if sensor == hold_sensor and minutes_missing > max_minutes:
+        return {"action": "GIU_LO",
+                "message": f"Mất {sensor} {minutes_missing} phút (quá {max_minutes} phút): giữ lô, bắt buộc kiểm vi sinh. "
+                           "Không dùng số ước lượng để cho xuất lô."}
+    return {"action": "DIEN_VA_DANH_DAU",
+            "message": f"Điền {sensor} bằng ước lượng và đánh dấu lô có dữ liệu được điền. Vẫn chấm điểm rủi ro, độ tin cậy giảm."}

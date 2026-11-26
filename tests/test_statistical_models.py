@@ -8,136 +8,42 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from scipy.special import expit
-
 SRC = Path(__file__).resolve().parents[1] / "src"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-sm = pytest.importorskip("statsmodels.api")
-
 from statistical_models import config as cfg  # noqa: E402
 from statistical_models import data  # noqa: E402
 from statistical_models.em_missing import (  # noqa: E402
-    conditional_impute, em_mvn, fit_final, interpolate_in_batch, mcar_mask, mean_impute, observed_loglik,
-    outage_mask, run_em_experiment)
-from statistical_models.logistic import (  # noqa: E402
-    cluster_cov, export_defect_pipeline, hosmer_lemeshow, irls, log_likelihood, roc_youden)
+    band_coverage, choose_fill_method, conditional_impute, conditional_impute_sd, em_mvn, fit_final,
+    interpolate_in_batch, mcar_mask, mean_impute, observed_loglik, outage_action, outage_mask, run_em_experiment)
+from statistical_models.hotelling import (  # noqa: E402
+    choose_k, detection_check, inject_fault, run_hotelling, run_monitoring, t2_scores, univariate_signal)
 from statistical_models.run_models import run  # noqa: E402
 
-def _fake_gold(n_groups=40, copies=3, minutes=6, seed=0):
-    """Giống cấu trúc Gold thật: mỗi lô MES bị nhân bản `copies` lần (cùng 5 giá trị MES và cùng thống kê cảm biến)."""
+def _fake_gold(n_batches=120, minutes=6, seed=0):
+    """Gold giả: lô trải trên tháng 01–03 (Phase I/II), mỗi lô có drift chung cho các cảm biến."""
     rng = np.random.default_rng(seed)
-    rows, sensor, key = [], [], 0
-    for g in range(n_groups):
-        defect = int(g % 8 == 0)
-        mes = {"fat_in": rng.normal(3.5, .1), "protein_in": rng.normal(3.2, .05), "acidity_sh": rng.normal(6.5, .2),
-               "yield_recovery_pct": rng.normal(88 if defect else 95, 2), "batch_defect_flag": defect}
-        proc = {"uht_temp_std": rng.normal(.8, .01), "uht_temp_min": rng.normal(137 + 0.2 * defect, .25),
-                "uht_temp_max": rng.normal(143, .25), "flow_rate_avg": rng.normal(5000 + 0.5 * defect, 1.0),
-                "n_anomalies": rng.integers(160, 240), "n_readings": 7200.0}
-        drift = rng.normal(0, .1)
-        for c in range(copies):
-            key += 1
-            day = 1 + (key % 28)
-            rows.append({"batch_key": key, "batch_id": f"B{key}", "date_key": 20250100 + day, **mes, **proc,
-                         "day_of_week": day % 7 + 1, "humidity_avg_pct": rng.normal(80, 9),
-                         "thi_index": rng.normal(68, 7), "is_heat_stress": int(rng.random() < .2),
-                         "gdt_smp_usd": np.nan if day < 3 else 2700 + 50 * (day > 14), "fao_dairy_index": np.nan})
-            n = minutes * 60
-            t0 = pd.Timestamp(2025, 1, day, tz="UTC") + pd.Timedelta(hours=c * 2 + g % 5)
-            sensor.append(pd.DataFrame({
-                "batch_key": key, "timestamp": t0 + pd.to_timedelta(np.arange(n), unit="s"),
-                "uht_temp": rng.normal(140 + drift, .8, n), "preheat_temp": rng.normal(80 + drift, .5, n),
-                "homo_press_stage1": rng.normal(180 + drift, 3, n), "homo_press_stage2": rng.normal(40 + drift, 1, n),
-                "flow_rate": rng.normal(5000 + 10 * drift, 80, n), "conductivity": rng.normal(4.8 + .1 * drift, .1, n),
-                "power_kw": rng.normal(75 + drift, 2, n)}))
-    b = pd.DataFrame(rows)
-    s = pd.concat(sensor, ignore_index=True)
-    b = b.merge(s.groupby("batch_key")["homo_press_stage1"].mean().rename("homo_press1_avg").reset_index())
-    return s, b
-
-def test_groups_and_dedup_remove_copies():
-    _, b = _fake_gold()
-    prep = data.prepare_batches(b)
-    assert prep["summary"]["n_batches"] == 120 and prep["summary"]["n_groups"] == 40
-    assert prep["summary"]["n_defect_groups"] == 5 and prep["summary"]["n_defect_batches"] == 15
-    # mỗi nhóm có đúng 3 bản sao, khử trùng giữ dòng nguyên vẹn
-    assert prep["all"].groupby(cfg.GROUP_COL).size().eq(3).all()
-    assert prep["dedup"]["batch_key"].is_unique
-    assert prep["all"]["gdt_smp_usd"].notna().all()  # đã điền giá GDT theo phiên gần nhất
-
-def test_usable_features_drops_nan_and_constant():
-    _, b = _fake_gold(n_groups=5)
-    keep, dropped = data.usable_features(b, ("protein_in", "fao_dairy_index", "n_readings", "khong_co"))
-    assert keep == ["protein_in"]
-    assert {d["feature"] for d in dropped} == {"fao_dairy_index", "n_readings", "khong_co"}
-
-def test_group_folds_keep_groups_together_and_reshuffle():
-    g = np.repeat(np.arange(30), 4)
-    a, b = data.group_folds(g, 5, seed=1), data.group_folds(g, 5, seed=2)
-    assert len(a) == 5
-    seen = np.concatenate([te for _, te in a])
-    assert np.array_equal(np.sort(seen), np.arange(len(g)))          # mỗi dòng được validate đúng một lần
-    for tr, te in a:
-        assert not set(g[tr]) & set(g[te])                            # bản sao không nằm ở cả train và test
-    assert any(not np.array_equal(x[1], y[1]) for x, y in zip(a, b))  # đổi seed là đổi cách chia
+    rows, sensor = [], []
+    for key in range(1, n_batches + 1):
+        day, month = 1 + (key % 28), 1 + (key % 3)
+        rows.append({"batch_key": key, "batch_id": f"B{key}", "date_key": 20250000 + 100 * month + day,
+                     "line_id": f"LINE_UHT_{1 + key % 2}", "batch_defect_flag": int(key % 8 == 0),
+                     "n_readings": 7200.0})
+        drift, n = rng.normal(0, .1), minutes * 60
+        t0 = pd.Timestamp(2025, month, day, tz="UTC") + pd.Timedelta(hours=key % 8)
+        sensor.append(pd.DataFrame({
+            "batch_key": key, "timestamp": t0 + pd.to_timedelta(np.arange(n), unit="s"),
+            "uht_temp": rng.normal(140 + drift, .8, n), "preheat_temp": rng.normal(80 + drift, .5, n),
+            "homo_press_stage1": rng.normal(180 + drift, 3, n), "homo_press_stage2": rng.normal(40 + drift, 1, n),
+            "flow_rate": rng.normal(5000 + 10 * drift, 80, n), "conductivity": rng.normal(4.8 + .1 * drift, .1, n),
+            "power_kw": rng.normal(75 + drift, 2, n)}))
+    return pd.concat(sensor, ignore_index=True), pd.DataFrame(rows)
 
 def test_split_by_group_has_no_overlap():
     g = np.repeat(np.arange(50), 10)
     tr, va = data.split_by_group(g, 0.2, seed=0)
     assert not set(g[tr]) & set(g[va]) and len(np.unique(g[va])) == 10 and (tr ^ va).all()
-
-def _logit_data(n=600, seed=1):
-    rng = np.random.default_rng(seed)
-    X = np.column_stack([np.ones(n), rng.normal(size=(n, 3))])
-    y = (rng.random(n) < expit(X @ np.array([-1.0, 0.8, -0.5, 0.3]))).astype(float)
-    return X, y, rng.integers(0, 60, n)
-
-def test_irls_matches_statsmodels_and_loglik_increases():
-    X, y, _ = _logit_data()
-    r = irls(X, y)
-    ref = sm.Logit(y, X).fit(disp=0)
-    assert r.converged and not r.separation_warning
-    np.testing.assert_allclose(r.beta, ref.params, atol=1e-8)
-    np.testing.assert_allclose(r.se, ref.bse, rtol=1e-6)
-    assert abs(r.loglik - ref.llf) < 1e-8
-    assert np.all(np.diff(r.history) >= -1e-12)
-
-def test_cluster_cov_matches_statsmodels():
-    X, y, g = _logit_data()
-    r = irls(X, y)
-    ref = sm.Logit(y, X).fit(disp=0, cov_type="cluster", cov_kwds={"groups": g})
-    np.testing.assert_allclose(np.sqrt(np.diag(cluster_cov(X, y, r.beta, g))), ref.bse, rtol=1e-6)
-
-def test_irls_flags_complete_separation():
-    x = np.r_[np.linspace(-2, -0.1, 20), np.linspace(0.1, 2, 20)]
-    X, y = np.column_stack([np.ones(40), x]), (x > 0).astype(float)
-    assert irls(X, y, max_iter=50).separation_warning
-
-def test_hosmer_lemeshow_and_youden():
-    rng = np.random.default_rng(3)
-    p = rng.uniform(0.02, 0.6, 4000)
-    y = (rng.random(4000) < p).astype(float)
-    hl = hosmer_lemeshow(y, p)
-    assert hl["df"] == 8 and hl["p_value"] > 0.001   # mô hình đúng thì không bác bỏ
-    bad = hosmer_lemeshow(y, np.clip(p * 0.3, 1e-6, 1))
-    assert bad["p_value"] < 1e-6                       # đánh giá thấp xác suất có hệ thống thì bị bác bỏ
-    r = roc_youden(np.r_[np.zeros(50), np.ones(50)], np.r_[np.linspace(0, .4, 50), np.linspace(.6, 1, 50)])
-    assert r["auc"] == 1.0 and r["sensitivity"] == 1.0 and r["specificity"] == 1.0
-
-def test_defect_pipeline_equals_irls():
-    _, b = _fake_gold()
-    prep = data.prepare_batches(b)
-    feats = list(cfg.DEFECT_FEATURES)
-    pipe = export_defect_pipeline(prep["all"], feats)
-    d = prep["all"]
-    X = d[feats].to_numpy(float)
-    Z = (X - X.mean(0)) / X.std(0)
-    r = irls(np.column_stack([np.ones(len(Z)), Z]), d[cfg.DEFECT_TARGET].to_numpy(float))
-    np.testing.assert_allclose(pipe[-1].coef_[0], r.beta[1:], atol=1e-4)
-    np.testing.assert_allclose(pipe.predict_proba(d[feats])[:, 1], expit(np.column_stack([np.ones(len(Z)), Z]) @ r.beta),
-                               atol=1e-5)
 
 def _mvn(n=2000, seed=4):
     rng = np.random.default_rng(seed)
@@ -193,26 +99,109 @@ def test_em_experiment_train_valid_split_by_batch():
 def test_run_end_to_end(tmp_path):
     s, b = _fake_gold()
     res = run(s, b, tmp_path / "reports", tmp_path / "models", figs=True)
-    assert res["chuan_bi"]["n_groups"] == 40
-    for f in ("yield_model_real.json", "defect_model_real.json", "em_sensor_mvn.json",
-              "yield_model.joblib", "defect_model.joblib"):
+    for f in ("monitoring_t2.json", "em_sensor_mvn.json"):
         assert (tmp_path / "models" / f).exists(), f
-    y = json.loads((tmp_path / "models" / "yield_model_real.json").read_text(encoding="utf-8"))
-    assert "fao_dairy_index" not in y["features"] and y["ols_independent"]["n"] == 40
-    d = json.loads((tmp_path / "models" / "defect_model_real.json").read_text(encoding="utf-8"))
-    assert d["irls_vs_statsmodels_max_abs_diff"]["beta"] < 1e-6
-    assert d["auc_oof_repeated"]["n_repeats"] == cfg.CV_REPEATS
-    assert {"mse_in_sample", "mse_cv_nested_groupkfold", "r2_cv_sd"} <= set(y["elasticnet"])
-    cvs = pd.read_csv(tmp_path / "reports" / "yield_cv_scores.csv")
-    assert {"mse_cv", "mse_cv_sd", "r2_cv_sd"} <= set(cvs.columns) and (cvs["n_repeats"] == cfg.CV_REPEATS).all()
+    t2 = json.loads((tmp_path / "models" / "monitoring_t2.json").read_text(encoding="utf-8"))
+    assert t2["train_phase1"]["months"] == list(cfg.T2_PHASE1_MONTHS) and t2["rule_lo_can_kiem_tra"]["k"] >= 1
+    assert t2["train_phase1"]["n_defect_batches_excluded"] > 0                # Phase I chỉ dùng lô đạt
+    assert t2["validate_phase2"]["n_batches"] + t2["train_phase1"]["n_batches"] + \
+        t2["train_phase1"]["n_defect_batches_excluded"] == res["so_lo"]
+    lst = pd.read_csv(tmp_path / "reports" / "lo_can_kiem_tra_phase2.csv")
+    assert len(lst) == t2["validate_phase2"]["n_batches"] and "can_kiem_tra" in lst
     e = json.loads((tmp_path / "models" / "em_sensor_mvn.json").read_text(encoding="utf-8"))
     assert e["validation"]["split"]["batch_overlap"] == 0
     assert e["final_fit"]["rows"] == res["so_phut"]                    # µ, Σ bàn giao học trên toàn bộ dữ liệu
-    assert res["bai3_em"]["loglik_khong_giam"] and "bai4_gmm" not in res
-    assert len(list((tmp_path / "reports" / "figures").glob("*.png"))) == 7
-    # bản sao của một lô không bao giờ nằm ở cả train và test
-    folds = pd.read_csv(tmp_path / "reports" / "defect_cv_folds.csv")
-    assert (folds["defects_test"] > 0).all()
+    assert set(e["fill_method"]) == set(cfg.SENSOR_VARS) and "hold_rule" in e
+    act = pd.read_csv(tmp_path / "reports" / "em_hanh_dong_khi_mat_uht.csv")
+    assert len(act) == e["hold_rule"]["so_lo_valid"] == e["validation"]["split"]["n_batches_valid"]
+    assert (act["hanh_dong"] == "GIU_LO").sum() == e["hold_rule"]["so_lo_giu"]
+    assert (tmp_path / "reports" / "em_cach_dien_tung_cam_bien.csv").exists()
+    assert res["bai2_dien_du_lieu_thieu"]["loglik_khong_giam"]
+    assert len(list((tmp_path / "reports" / "figures").glob("*.png"))) == 4
+    # chạy riêng 1 bài thì giữ kết quả bài kia trong summary.json
+    res2 = run(s, b, tmp_path / "reports", tmp_path / "models", figs=False, tasks=(1,))
+    assert "bai2_dien_du_lieu_thieu" in res2
+
+def test_t2_matches_chi2_and_contributions_sum():
+    X, cov, _ = _mvn(20000, seed=11)
+    sc, contrib = t2_scores(X, np.zeros(5), cov, alpha=0.01)
+    assert abs(sc["signal"].mean() - 0.01) < 0.003                      # dữ liệu ổn định: báo động ≈ α
+    np.testing.assert_allclose(np.nansum(contrib, 1), sc["t2"], atol=1e-9)
+    Xn = X.copy()
+    Xn[:, 0] = np.nan                                                   # mất 1 cảm biến: tính trên 4 chiều còn lại
+    sn, _ = t2_scores(Xn, np.zeros(5), cov, alpha=0.01)
+    assert (sn["n_observed"] == 4).all() and abs(sn["signal"].mean() - 0.01) < 0.003
+    se, _ = t2_scores(np.full((2, 5), np.nan), np.zeros(5), cov)    # mất hết cảm biến
+    assert se["t2"].isna().all() and not se["signal"].any() and (se["n_observed"] == 0).all()
+
+def test_run_hotelling_top_sensor_and_per_batch():
+    cols = list("abc")
+    X = np.zeros((6, 3))
+    X[1, 2] = 10.0                                                       # lô 1, phút 2: cảm biến c lệch mạnh
+    minutes = pd.DataFrame(X, columns=cols).assign(batch_key=[1, 1, 1, 2, 2, 2], minute=[0, 1, 2] * 2)
+    b = pd.DataFrame({"batch_key": [1, 2], "batch_id": ["B1", "B2"], "line_id": ["L1", "L2"]})
+    h = run_hotelling(minutes, np.zeros(3), np.eye(3), cols, b)
+    assert h["n_signals"] == 1 and h["top_sensor_counts"] == {"c": 1}
+    assert h["minutes"].loc[1, "top_share"] == 1.0 and h["minutes"].loc[1, "batch_id"] == "B1"
+    pb = h["per_batch"].set_index("batch_key")
+    assert pb.loc[1, "n_signals"] == 1 and pb.loc[2, "n_signals"] == 0 and pb.loc[1, "t2_max"] == 100.0
+
+def test_t2_catches_unusual_combination_better_than_3_sigma():
+    _, cov, _ = _mvn(10, seed=12)
+    chk = detection_check(np.zeros(5), cov, list("abcde"), n=5000)
+    assert chk["t2_detection_rate"] > chk["univariate_3sigma_detection_rate"]
+    assert abs(chk["false_alarm_rate"] - cfg.T2_ALPHA) < 0.003
+
+def test_choose_k_and_inject_fault():
+    assert choose_k(pd.Series([0] * 90 + [1] * 8 + [2] * 2), max_rate=0.05) == 2
+    keys = np.repeat(np.arange(4), 30)
+    X = np.zeros((120, 2))
+    Xf, fault = inject_fault(X, keys, {1: -2.0}, np.array([1.0, 3.0]), 15, np.random.default_rng(0))
+    assert fault.sum() == 60 and (Xf[fault, 1] == -6.0).all() and (Xf[:, 0] == 0).all()
+    for k in range(4):                                                   # mỗi lô đúng 1 đoạn liền 15 phút
+        idx = np.flatnonzero(fault[keys == k])
+        assert len(idx) == 15 and np.all(np.diff(idx) == 1)
+    assert univariate_signal(np.array([[0.0, 3.5], [0.0, 1.0]]), np.zeros(2), np.eye(2)).tolist() == [True, False]
+
+def test_run_monitoring_train_phase1_validate_phase2():
+    s, b = _fake_gold()
+    r = run_monitoring(data.minute_means(s), b)
+    assert r["phase1"]["months"] == [1] and r["phase2"]["n_batches"] > 0
+    assert r["phase1"]["ti_le_lo_gan_co"] <= cfg.T2_BATCH_MAX_FLAG_RATE  # k chọn trên Phase I
+    assert set(r["faults"]["phuong_phap"]) == {"Hotelling T²", "3 sigma từng cảm biến"}
+    lst = r["inspection_list"]
+    assert (lst["can_kiem_tra"] == (lst["n_signals"] >= r["k_t2"])).all()
+    assert (lst.loc[lst["can_kiem_tra"], "ly_do"] != "").all()
+    assert r["phase2"]["n_lo_can_kiem_tra"] == lst["can_kiem_tra"].sum()
+    assert not set(lst["batch_key"]) & set(b.loc[b["date_key"] // 100 % 100 == 1, "batch_key"])  # chỉ lô Phase II
+
+def test_run_monitoring_needs_phase2():
+    s, b = _fake_gold()
+    b1 = b[b["date_key"] // 100 % 100 == 1]
+    with pytest.raises(ValueError):
+        run_monitoring(data.minute_means(s[s["batch_key"].isin(b1["batch_key"])]), b1)
+
+def test_conditional_impute_sd_and_band_coverage():
+    X, cov, rng = _mvn(6000, seed=13)
+    mask = mcar_mask(X.shape, 0.2, rng)
+    Xn = np.where(mask, np.nan, X)
+    filled, sd = conditional_impute_sd(Xn, np.zeros(5), cov)
+    np.testing.assert_allclose(filled, conditional_impute(Xn, np.zeros(5), cov), atol=1e-12)
+    assert (sd[~mask] == 0).all() and (sd[mask] > 0).all()
+    assert 0.93 <= band_coverage(X, Xn, np.zeros(5), cov) <= 0.97       # dải 95 % chứa ≈ 95 % giá trị thật
+    f_all, sd_all = conditional_impute_sd(np.full((1, 5), np.nan), np.ones(5), cov)  # mất hết: về µ, sd biên
+    np.testing.assert_allclose(f_all[0], np.ones(5))
+    np.testing.assert_allclose(sd_all[0], np.sqrt(np.diag(cov)))
+
+def test_choose_fill_method_and_outage_action():
+    rz = pd.DataFrame({"tap": ["valid_mat_tin_hieu"] * 3, "bien": ["a", "b", "TOAN_BO"],
+                       "EM": [0.5, 0.9, 0.7], "noi_suy_thoi_gian": [0.8, 0.2, 0.5], "trung_binh": [1.0, 1.0, 1.0]})
+    m = choose_fill_method(rz)
+    assert set(m) == {"a", "b"} and m["a"]["sau_khi_co_tin_hieu_lai"] == "EM"
+    assert m["b"]["sau_khi_co_tin_hieu_lai"] == "noi_suy" and m["b"]["khi_dang_mat"] == "EM"
+    assert outage_action("uht_temp", cfg.EM_HOLD_MAX_MINUTES + 1)["action"] == "GIU_LO"
+    assert outage_action("uht_temp", cfg.EM_HOLD_MAX_MINUTES)["action"] == "DIEN_VA_DANH_DAU"
+    assert outage_action("flow_rate", 60)["action"] == "DIEN_VA_DANH_DAU"
 
 def test_outage_mask_contiguous_10_to_15_minutes():
     keys = np.repeat(np.arange(12), 120)

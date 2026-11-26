@@ -1,80 +1,96 @@
-# statistical_models: Mô hình thống kê – Linear/Logistic, MLE & EM
+# statistical_models: Giám sát dây chuyền (Hotelling T²) và điền dữ liệu cảm biến bị mất (EM)
 
-Nhận dữ liệu Gold từ TV4 và danh sách biến từ TV5.
+Nhận dữ liệu Gold từ TV4 (180 ngày, 01/01–29/06/2025, 1.440 lô, 2 dây chuyền). Có 2 bài toán:
+
+1. **Giám sát dây chuyền / lô cần kiểm tra:** dùng Hotelling T² trên 7 cảm biến cùng lúc để báo phút bất thường và gắn cờ lô cần kiểm tra.
+2. **Điền dữ liệu cảm biến bị mất:** EM cho N(µ, Σ), viết bằng NumPy thuần. Đi kèm dải tin cậy 95 %, cách điền cho từng cảm biến và quy tắc giữ lô.
 
 - **Cách chạy:** [HUONG_DAN_CHAY.md](HUONG_DAN_CHAY.md)
 - **Báo cáo ngắn:** [docs/bao_cao_tv6_statistical_models.md](../../docs/bao_cao_tv6_statistical_models.md)
 
-Phần dưới đây là chi tiết kỹ thuật và kết quả đầy đủ.
-
 ## Cấu trúc
 | File | Nội dung |
 |---|---|
-| config.py | biến của từng bài, tham số thuật toán |
-| data.py | phạm vi 2025 + n_readings > 0, gán `group_id`, khử trùng, điền giá GDT, trung bình theo phút, chia fold / train–valid theo nhóm |
-| linear_models.py | Bài 1: OLS, OLS SE cluster, ElasticNet + CV lồng nhau theo nhóm, MSE, chẩn đoán phần dư |
-| logistic.py | Bài 2: IRLS tự viết (Newton–Raphson, giảm bước), SE cluster tự viết, ROC/AUC, Youden J, Hosmer–Lemeshow |
-| em_missing.py | Bài 3: EM cho N(µ, Σ) có dữ liệu khuyết (NumPy thuần), kỳ vọng có điều kiện, thí nghiệm train/valid, kịch bản mất tín hiệu |
+| config.py | tham số thuật toán (α của T², Phase I, ngưỡng gắn cờ lô, lỗi giả lập, quy tắc giữ lô, tham số EM) |
+| data.py | đọc Gold, trung bình theo phút của từng lô, chia train/valid theo lô |
+| hotelling.py | Bài 1: T² và đóng góp từng cảm biến, T² khi thiếu cảm biến, mô phỏng, train Phase I / validate Phase II, danh sách lô cần kiểm tra |
+| em_missing.py | Bài 2: EM, kỳ vọng có điều kiện, thí nghiệm train/valid; thêm `conditional_impute_sd`, `band_coverage`, `choose_fill_method`, `outage_action` |
 | figures.py, run_models.py | hình và pipeline ghi file |
-
-## Bước chuẩn bị chung
-240 lô năm 2025 → **63 `group_id`** (57 nhóm có 4 bản sao). Trong cùng một nhóm, các biến cảm biến theo lô cũng giống hệt nhau;
-chỉ thời tiết và ngày là khác. **12 dòng lỗi thực chất chỉ là 3 lô lỗi độc lập.**
-`fao_dairy_index` toàn NaN nên tự động bị loại. `gdt_smp_usd` thiếu 24 lô (01–06/01/2025, trước phiên GDT đầu tiên) nên lấy theo phiên gần nhất.
+| `scripts/verify_statistical_models.py` | đối chiếu 13 con số với bản mô tả, in ĐẠT hoặc LỆCH |
 
 ## Cách train và validate
-| Bài | Train | Validate | Lý do |
-|---|---|---|---|
-| 1. ElasticNet / OLS | học β̂; alpha, l1_ratio chọn bằng CV bên trong tập train | k-fold theo `group_id`, 5 fold × **5 lần chia**; R², MSE dạng trung bình ± độ lệch chuẩn | chỉ 63 lô độc lập |
-| 2. Logistic | IRLS học β̂ → Odds Ratio | StratifiedGroupKFold 3 fold (mỗi fold đúng 1 lô lỗi) × 5 lần chia; ngưỡng Youden lấy từ dự báo validate | chỉ 3 lô lỗi |
-| 3. EM | µ, Σ học trên 3.000 phút của **192 lô train** (có 10 % ô bị xóa) | **48 lô valid** chưa thấy, 2 kịch bản: xóa ngẫu nhiên 10 % ô; mỗi lô có 2 cảm biến mất liền 10–15 phút | dữ liệu cảm biến nhiều |
+| Bài | Train | Validate |
+|---|---|---|
+| 1. Giám sát (T²) | **Phase I = tháng 01**: học µ, Σ bằng EM trên 236 lô đạt (28.320 phút; đã bỏ 12 lô lỗi). Chọn k = số phút vượt ngưỡng tối thiểu để gắn cờ lô, sao cho ≤ 5 % lô Phase I bị gắn cờ. Kết quả **k = 2** | **Phase II = tháng 02–06**: 1.192 lô chưa thấy (143.040 phút). Đo 4 thứ: (a) báo động giả theo phút và theo lô; (b) báo động giả khi mất cảm biến; (c) chèn lỗi giả lập vào lô thật rồi đo tỉ lệ bắt được, so với quy tắc 3 sigma từng cảm biến ở cùng mức báo sai; (d) đối chiếu với cờ lỗi lô |
+| 2. Điền dữ liệu cảm biến bị mất (EM) | µ, Σ học trên 3.000 phút lấy từ **1.152 lô train** (80 %), có 10 % ô bị xóa | **288 lô valid** chưa thấy, 2 kịch bản: xóa ngẫu nhiên 10 % ô; mỗi lô có 2 cảm biến mất liền 10–15 phút |
 
-Bản sao của một lô không bao giờ nằm ở cả train và valid. Sau khi validate, các mô hình được học lại trên toàn bộ dữ liệu:
-ElasticNet và Logistic trên 240 lô, µ và Σ của EM trên 28.800 phút.
+Bài 1 chia theo thời gian (giống TV5: `PHASE1_MONTHS = (1,)`), vì giới hạn kiểm soát phải học từ quá khứ rồi áp cho tương lai.
+Bài 2 chia ngẫu nhiên theo lô. Các phút của cùng một lô không bao giờ nằm ở cả train và valid.
+Sau khi validate, µ, Σ của EM được học lại trên toàn bộ 172.800 phút để bàn giao. Giám sát giữ µ, Σ của Phase I, đúng cách làm của biểu đồ kiểm soát.
 
-## Kết quả trên dữ liệu Gold thật
+## Kết quả trên dữ liệu Gold
 
-### Bài 1 – Tỷ lệ thu hồi (13 biến)
-| Mô hình | n | R² train | MSE train | R² CV | MSE CV |
-|---|---|---|---|---|---|
-| OLS, lô độc lập | 63 | 0,106 (R² hiệu chỉnh −0,13; F p = 0,94) | 4,99 | −0,62 ± 0,14 | 9,06 ± 0,76 |
-| OLS, SE cluster theo `group_id` | 240 | 0,097 | 5,23 | −0,52 ± 0,14 | 8,81 ± 0,84 |
-| ElasticNet, CV lồng nhau | 63 | – | – | −0,06 ± 0,03 | 5,93 ± 0,17 |
-| **ElasticNet, CV lồng nhau** | 240 | 0 (alpha = 3,6, l1_ratio = 0,1, cả 13 β̂ = 0) | 5,80 | **−0,06 ± 0,03** | **6,13 ± 0,15** |
-| ElasticNet, KFold thường (rò rỉ, chỉ để so sánh) | 240 | – | – | −0,01 ± 0,02 | 5,83 ± 0,14 |
+### Bài 1 – Giám sát dây chuyền / lô cần kiểm tra
+Ngưỡng T² là χ²(7) ở α = 0,27 %, bằng 21,8.
 
-Phương sai của yield là 5,80; MSE ≈ phương sai nghĩa là mô hình không tốt hơn việc dự báo bằng trung bình.
-Không hệ số OLS nào có ý nghĩa (mọi KTC 95 % chứa 0). Phần dư mô hình 63 lô xấp xỉ chuẩn (JB p = 0,77; Shapiro p = 0,80; BP p = 0,35).
-**Đúng như đề dự đoán:** trong `generate_mes_data.py`, yield chỉ phụ thuộc cờ lỗi (95 ± 2 nếu đạt, 88 ± 3 nếu lỗi).
-Vì ElasticNet loại hết biến, `yield_model.joblib` dự báo hằng số (≈ 94,6 %). Đây là kết quả trung thực của dữ liệu.
+**Báo động giả theo phút:**
 
-### Bài 2 – Lô lỗi (`uht_temp_min`, `flow_rate_avg`)
-- IRLS tự viết **trùng statsmodels** (sai khác tối đa ~1e-9) về hệ số, SE MLE, SE cluster và log-likelihood. Hội tụ sau 7–8 vòng.
-- Mẫu chính: 240 lô, SE cluster. OR theo 1 độ lệch chuẩn: `uht_temp_min` **3,85** (KTC 1,27–11,7; p = 0,017),
-  `flow_rate_avg` **2,00** (1,03–3,86; p = 0,040).
-- Kiểm tra độ nhạy: 63 lô độc lập, SE MLE. OR gần như giữ nguyên (3,60; 1,87) nhưng **không có ý nghĩa** (p = 0,15; 0,36).
-- AUC train 0,86 (240 lô), 0,87 (63 lô). AUC validate: **0,84 ± 0,02** (240 lô), 0,85 ± 0,02 (63 lô).
-- Ngưỡng Youden J = 0,049 → độ nhạy 1,0, độ đặc hiệu 0,71.
-- Hosmer–Lemeshow trên 63 lô độc lập: p = 0,12 (train), 0,96 (validate) → không bác bỏ độ phù hợp.
-- `defect_model.joblib` là LogisticRegression không phạt (C = ∞), tức đúng nghiệm MLE; hệ số trùng IRLS (đã có test).
+| Tập | Hotelling T² | 3 sigma từng cảm biến |
+|---|---|---|
+| Phase I (train) | 0,16 % | 1,52 % |
+| **Phase II, lô đạt** | **0,26 %** (kỳ vọng 0,27 %) | 1,65 % |
+| Phase II, khi mất 2 cảm biến (T² tính trên 5 cảm biến còn lại) | 0,25 % | – |
 
-**Cảnh báo:** chỉ có 3 lô lỗi độc lập. SE cluster khi có rất ít cụm chứa sự kiện thường bị ước lượng thấp, nên mức "có ý nghĩa" ở mẫu
-240 lô không vững. Hosmer–Lemeshow trên 240 lô (p ≈ 0) không dùng được vì vi phạm giả định các quan sát độc lập.
+Phân phối T² trên Phase II khớp χ²(7) (hình `fig01`). Quy tắc 3 sigma soi 7 cảm biến riêng lẻ nên báo sai nhiều gấp khoảng 6 lần.
 
-### Bài 3 – EM điền dữ liệu cảm biến khuyết (7 biến, z-score theo tập train)
-| Tập | Số ô bị xóa | EM | Điền trung bình | Nội suy theo thời gian | EM so với trung bình |
-|---|---|---|---|---|---|
-| train, MCAR 10 % | 2.140 | 0,920 | 1,018 | – | −9,6 % |
-| valid, MCAR 10 % | 4.127 | **0,898** | 1,036 | 1,070 | −13,3 % |
-| valid, mất tín hiệu 10–15 phút | 1.203 | **0,890** | 1,072 | 1,056 | −17,0 % |
+**Gắn cờ "lô cần kiểm tra"**, có lỗi giả lập chèn vào 1.136 lô đạt của Phase II (đoạn 15 phút, lệch 2 độ lệch chuẩn).
+Mỗi quy tắc chọn k riêng trên Phase I để báo sai ≤ 5 %, nên hai cột được so ở cùng mức báo sai:
 
-EM hội tụ sau 6 vòng, log-likelihood không giảm. Kết quả trên tập valid không kém train, nên µ, Σ học được dùng tốt cho lô mới.
-Cải thiện rõ nhất ở `preheat_temp`, `uht_temp`, `conductivity`; gần như không cải thiện ở `flow_rate`, `homo_press_stage1`, vì hai biến này
-hầu như không tương quan với biến khác. Tương quan giữa các cảm biến theo phút (0,2–0,5) đến từ drift chung của từng lô trong bộ sinh dữ liệu.
+| Tình huống | T², k = 2 | 3 sigma, k = 7 |
+|---|---|---|
+| Lô đạt không chèn lỗi (báo sai) | 4,0 % | 4,8 % |
+| `uht_temp` −2 sd (lệch 1 cảm biến) | **46 %** | 18 % |
+| `uht_temp` +2 sd, `preheat_temp` −2 sd (tổ hợp lạ, tương quan 0,59) | **100 %** | 30 % |
+
+Mô phỏng từ N(µ, Σ) (`detection_check`) cho kết quả tương tự: báo sai 0,29 %; bắt tổ hợp lạ 68 % số phút, còn 3 sigma bắt 32 %.
+Ở kịch bản lệch 1 cảm biến, 3 sigma bắt nhiều phút hơn (17,5 % so với 10,6 %). Nhưng vì nó báo sai nhiều, phải nâng k lên 7, nên tính theo lô thì T² vẫn tốt hơn.
+
+**Danh sách lô cần kiểm tra (Phase II):** 46/1.192 lô (`lo_can_kiem_tra_phase2.csv`). Mỗi lô có ghi lý do và cảm biến góp nhiều nhất vào T².
+Lô đầu danh sách là `BATCH_20250213_03_LINE_UHT_1` với 56 phút vượt ngưỡng, chủ yếu do `flow_rate`: lưu lượng cả lô lệch xa mức thường.
+Tính trên các phút vượt ngưỡng, cảm biến góp nhiều nhất là `flow_rate` (91), `preheat_temp` (72) và `uht_temp` (64).
+
+**Đối chiếu với cờ lỗi lô:** T² **không** phân biệt được lô lỗi (AUC 0,50). Chỉ 1,8 % lô lỗi bị gắn cờ, so với 4,0 % lô đạt.
+Lý do nằm ở bộ sinh dữ liệu (`docs/ground_truth.md`). Lỗi do hai yếu tố gây ra:
+- mức UHT của lô thấp hơn một chút: drift có sd 0,1 °C, vẫn nằm trong vùng vận hành bình thường;
+- độ chua sữa vào `acidity_sh` cao: đây là chỉ tiêu phòng thí nghiệm, không phải cảm biến.
+
+Vì vậy lô lỗi không phải là một trạng thái dây chuyền bất thường. T² dùng để phát hiện dây chuyền chạy khác thường; dự báo lô lỗi cần một mô hình riêng có `acidity_sh`.
+
+### Bài 2 – Điền dữ liệu cảm biến bị mất (7 biến, z-score theo tập train)
+| Tập | Số ô bị xóa | EM | Điền trung bình | Nội suy theo thời gian |
+|---|---|---|---|---|
+| train, MCAR 10 % | 2.140 | 0,865 | 1,039 | – |
+| valid, MCAR 10 % | 24.147 | 0,855 | 1,001 | **0,810** |
+| **valid, mất tín hiệu 10–15 phút** | 7.211 | **0,843** | 1,008 | 0,862 |
+
+- **EM luôn tốt hơn điền trung bình**: sai số giảm 15 % khi mất ngẫu nhiên, 16 % khi mất tín hiệu. EM hội tụ sau 6 vòng, log-likelihood không giảm.
+- **So với nội suy:** khi mất ô lẻ, nội suy giữa hai phút kề nhau tốt hơn EM. Khi mất tín hiệu liền 10–15 phút, EM tốt hơn.
+  Với `flow_rate` và `power_kw`, nội suy gần như đúng tuyệt đối (RMSE 0,08 và 0,13), vì mức của hai biến này cố định theo từng lô (`flow_dev`, sản phẩm).
+- **Cách điền cho từng cảm biến** (`em_cach_dien_tung_cam_bien.csv`):
+  - Khi đang mất tín hiệu thì chỉ dùng được EM, vì nội suy cần số đo ở cả hai đầu đoạn mất.
+  - Khi đã có tín hiệu lại thì nội suy cho `flow_rate`, `power_kw`, `preheat_temp`, và dùng EM cho 4 cảm biến còn lại.
+- **Dải 95 % của giá trị điền** (±1,96 sd có điều kiện) chứa đúng **95,3 %** (MCAR) và **95,0 %** (mất tín hiệu) giá trị thật. Độ bất định EM báo ra là đáng tin.
+- **Quy tắc giữ lô:** mất `uht_temp` quá 5 phút thì giữ lô và bắt buộc kiểm vi sinh. Lý do: nhiệt tiệt trùng là điểm kiểm soát tới hạn, không được cho xuất lô bằng số ước lượng.
+  Trong kịch bản mất tín hiệu, 86/288 lô valid bị mất `uht_temp`, và cả 86 lô đều phải giữ vì đoạn mất dài 10–15 phút.
+
+`scripts/verify_statistical_models.py` đạt **13/13** mục so với số mong đợi của bản mô tả.
 
 ## File kết quả
 | File | Nội dung |
 |---|---|
-| `models/yield_model.joblib`, `models/defect_model.joblib` | mô hình đóng gói (Bước 4 kế hoạch) |
-| `models/yield_model_real.json`, `models/defect_model_real.json`, `models/em_sensor_mvn.json` | tham số và chỉ số của từng bài |
-| `reports/models/*.csv`, `reports/models/figures/`, `reports/models/summary.json` | bảng, hình, tóm tắt |
+| `models/monitoring_t2.json` | µ, Σ Phase I, ngưỡng, k, kết quả validate của giám sát |
+| `models/em_sensor_mvn.json` | µ̂, Σ̂ của EM (học trên toàn bộ dữ liệu), kết quả validate, cách điền, quy tắc giữ lô |
+| `reports/models/t2_*.csv`, `lo_can_kiem_tra_phase2.csv` | bảng của bài giám sát |
+| `reports/models/em_*.csv` | bảng của bài điền dữ liệu cảm biến bị mất |
+| `reports/models/figures/` | `fig01` phân phối T², `fig02` gắn cờ lô và bắt lỗi, `fig03` log-likelihood EM, `fig04` RMSE EM |
+| `reports/models/summary.json` | tóm tắt toàn bộ |

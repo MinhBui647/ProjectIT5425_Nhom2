@@ -9,6 +9,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker  # noqa: E402,F401
 import numpy as np  # noqa: E402
 import pandas as pd  # noqa: E402
 from scipy import stats  # noqa: E402
@@ -28,80 +29,12 @@ def _save(fig, out: Path, name: str) -> Path:
     plt.close(fig)
     return p
 
-def fig_yield_residuals(res, out: Path) -> Path:
-    """Phần dư OLS (lô độc lập): phần dư theo giá trị dự báo và Q–Q."""
-    fig, ax = plt.subplots(1, 2, figsize=(9, 3.6))
-    r, f = np.asarray(res.resid), np.asarray(res.fittedvalues)
-    ax[0].scatter(f, r, s=22, color=BLUE, edgecolor="white", linewidth=0.8)
-    ax[0].axhline(0, color=GRAY, lw=1, ls="--")
-    ax[0].set(xlabel="Giá trị dự báo (%)", ylabel="Phần dư (%)", title="Phần dư theo giá trị dự báo")
-    (osm, osr), (slope, icpt, _) = stats.probplot(r, dist="norm")
-    ax[1].scatter(osm, osr, s=22, color=BLUE, edgecolor="white", linewidth=0.8)
-    ax[1].plot(osm, slope * np.asarray(osm) + icpt, color=AMBER, lw=1.5, ls="--", label="đường chuẩn")
-    ax[1].set(xlabel="Phân vị lý thuyết", ylabel="Phân vị phần dư", title="Q–Q phần dư")
-    ax[1].legend(loc="upper left")
-    fig.suptitle(f"Bài 1 – OLS {int(res.nobs)} lô độc lập: chẩn đoán phần dư", fontsize=11)
-    return _save(fig, out, "fig01_yield_residuals.png")
-
-def fig_enet_path(alphas, coefs, features, alpha_star, l1_ratio, out: Path) -> Path:
-    fig, ax = plt.subplots(figsize=(8, 4.2))
-    la = np.log10(alphas)
-    order = np.argsort(-np.max(np.abs(coefs), axis=1))
-    styles = ["-", "--", ":", "-."]
-    for rank, j in enumerate(order):
-        top = rank < 4
-        ax.plot(la, coefs[j], lw=2 if top else 1, color=[BLUE, AMBER, RED, BLUE][rank] if top else "#C7CBD1",
-                ls=styles[rank] if top else "-", label=features[j] if top else None, zorder=3 if top else 2)
-    ax.axvline(np.log10(alpha_star), color=GRAY, lw=1, ls="--")
-    ax.text(np.log10(alpha_star), ax.get_ylim()[1], "alpha chọn bởi GroupKFold ", va="top", ha="right",
-            fontsize=8.5, color="#374151")
-    ax.axhline(0, color="#9CA3AF", lw=0.8)
-    ax.set(xlabel="log10(alpha)", ylabel="Hệ số (biến đã chuẩn hóa)",
-           title=f"Bài 1 – Đường hệ số ElasticNet (l1_ratio = {l1_ratio:g}); 4 biến lớn nhất được tô màu")
-    ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.14), ncol=4)
-    return _save(fig, out, "fig02_elasticnet_path.png")
-
-def fig_yield_cv(y, oof, label: str, out: Path) -> Path:
-    fig, ax = plt.subplots(figsize=(4.8, 4.4))
-    lo, hi = min(y.min(), oof.min()), max(y.max(), oof.max())
-    ax.plot([lo, hi], [lo, hi], color=GRAY, lw=1, ls="--", label="dự báo hoàn hảo")
-    ax.axhline(y.mean(), color=AMBER, lw=1.5, ls=":", label="trung bình y")
-    ax.scatter(y, oof, s=22, color=BLUE, edgecolor="white", linewidth=0.8, label="dự báo ngoài mẫu")
-    ax.set(xlabel="yield_recovery_pct thật (%)", ylabel="Dự báo ngoài mẫu (%)", title=f"Bài 1 – {label}")
-    ax.legend(loc="upper left")
-    return _save(fig, out, "fig03_yield_cv_pred_vs_actual.png")
-
-def fig_roc(rocs: dict, out: Path) -> Path:
-    fig, axes = plt.subplots(1, len(rocs), figsize=(4.6 * len(rocs), 4.3), squeeze=False)
-    for ax, (name, r) in zip(axes[0], rocs.items()):
-        ax.plot([0, 1], [0, 1], color="#9CA3AF", lw=1, ls="--")
-        for key, col, ls, lab in (("in_sample", BLUE, "-", "trong mẫu"), ("oof", AMBER, "--", "ngoài mẫu (CV)")):
-            rr = r[key]
-            ax.plot(rr["fpr"], rr["tpr"], color=col, ls=ls, drawstyle="steps-post",
-                    label=f"{lab}: AUC = {rr['auc']:.3f}")
-        best = r["oof"]
-        ax.scatter([1 - best["specificity"]], [best["sensitivity"]], s=60, color=RED, zorder=4, edgecolor="white",
-                   label=f"Youden J (CV), ngưỡng = {best['threshold']:.3f}")
-        ax.set(xlabel="1 − độ đặc hiệu", ylabel="Độ nhạy", title=f"Bài 2 – ROC ({name})", xlim=(0, 1), ylim=(0, 1.02))
-        ax.legend(loc="lower right", fontsize=8.5)
-    return _save(fig, out, "fig04_defect_roc.png")
-
-def fig_hosmer(table, hl: dict, name: str, out: Path) -> Path:
-    fig, ax = plt.subplots(figsize=(5.4, 4))
-    x = np.arange(len(table))
-    ax.bar(x - 0.2, table["observed_1"], width=0.38, color=BLUE, label="số lô lỗi quan sát")
-    ax.bar(x + 0.2, table["expected_1"], width=0.38, color=AMBER, label="số lô lỗi kỳ vọng")
-    ax.set(xticks=x, xticklabels=[f"{i + 1}" for i in x], xlabel="Nhóm theo xác suất dự báo (thấp → cao)",
-           ylabel="Số lô lỗi", title=f"Bài 2 – Hosmer–Lemeshow ({name}): p = {hl['p_value']:.3f}")
-    ax.legend(loc="upper left")
-    return _save(fig, out, "fig05_defect_hosmer_lemeshow.png")
-
 def fig_em_loglik(history, out: Path) -> Path:
     fig, ax = plt.subplots(figsize=(5.6, 3.6))
     ax.plot(np.arange(len(history)), history, color=BLUE, marker="o", ms=4)
     ax.set(xlabel="Vòng lặp EM", ylabel="Log-likelihood dữ liệu quan sát",
-           title="Bài 3 – Log-likelihood qua các vòng lặp (không giảm)")
-    return _save(fig, out, "fig06_em_loglik.png")
+           title="Điền dữ liệu cảm biến (EM) – Log-likelihood qua các vòng lặp (không giảm)")
+    return _save(fig, out, "fig03_em_loglik.png")
 
 def fig_em_rmse(rmse_z, out: Path) -> Path:
     """RMSE trên ô bị xóa: tập train, tập valid MCAR, tập valid mất tín hiệu 10–15 phút."""
@@ -135,11 +68,55 @@ def fig_em_rmse(rmse_z, out: Path) -> Path:
             if lab not in labels:
                 handles.append(h)
                 labels.append(lab)
-    fig.suptitle("Bài 3 – RMSE trên các ô bị xóa; µ và Σ chỉ học trên tập train", fontsize=11)
+    fig.suptitle("Điền dữ liệu cảm biến (EM) – RMSE trên các ô bị xóa; µ và Σ chỉ học trên tập train", fontsize=11)
     fig.tight_layout(rect=(0, 0.08, 1, 1))
     fig.legend(handles, labels, loc="lower center", ncol=3, frameon=False)
-    p = out / "fig07_em_rmse.png"
+    p = out / "fig04_em_rmse.png"
     fig.savefig(p, bbox_inches="tight")
     plt.close(fig)
     
     return p
+
+def fig_t2_distribution(t2: np.ndarray, p: int, limit: float, rate: float, alpha: float, out: Path) -> Path:
+    """Phân phối T² Phase II so với χ²(p)."""
+    t2 = np.asarray(t2, float)
+    t2 = t2[np.isfinite(t2)]
+    fig, ax = plt.subplots(figsize=(7.2, 3.9))
+    hi = max(np.quantile(t2, 0.999), limit * 1.15)
+    bins = np.linspace(0, hi, 70)
+    ax.hist(np.clip(t2, 0, hi), bins=bins, density=True, color=BLUE, alpha=0.85, edgecolor="white", linewidth=0.5,
+            label="T² các phút Phase II (lô chưa thấy)")
+    x = np.linspace(0.01, hi, 400)
+    ax.plot(x, stats.chi2.pdf(x, p), color=AMBER, ls="--", label=f"χ²({p}) lý thuyết")
+    ax.axvline(limit, color=RED, lw=1.5)
+    ax.text(limit, ax.get_ylim()[1] * 0.92, f"ngưỡng χ² = {limit:.1f}  \nvượt ngưỡng: {100 * rate:.2f} %  \n"
+            f"(kỳ vọng α = {100 * alpha:.2f} %)  ", color="#374151", fontsize=8.5, va="top", ha="right")
+    ax.set(xlabel="Hotelling T²", ylabel="Mật độ", title="Giám sát – T² trên dữ liệu kiểm định khớp χ² lý thuyết")
+    ax.legend(loc="center right")
+    return _save(fig, out, "fig01_t2_phan_phoi.png")
+
+def fig_t2_detection(faults: pd.DataFrame, batch_level: pd.DataFrame, out: Path) -> Path:
+    """Tỉ lệ lô bị gắn cờ: lô đạt (báo sai) và lô có lỗi giả lập."""
+    methods = [("Hotelling T²", BLUE, None), ("3 sigma từng cảm biến", AMBER, "///")]
+    scen = list(dict.fromkeys(faults["kich_ban"]))
+    labels = dict(zip(faults["kich_ban"], faults["nhan"]))
+    groups = ["Lô đạt, không chèn lỗi\n(báo sai)"] + [labels[k] for k in scen]
+    vals = {m: [float(batch_level.set_index("phuong_phap").loc[m, "ti_le_gan_co_lo_dat"])]
+            + [float(faults[(faults.kich_ban == k) & (faults.phuong_phap == m)]["ti_le_bat_lo_loi"].iloc[0])
+               for k in scen] for m, *_ in methods}
+    fig, ax = plt.subplots(figsize=(7.6, 4.0))
+    x = np.arange(len(groups))
+    w = 0.36
+    for i, (m, col, hatch) in enumerate(methods):
+        k = int(batch_level.set_index("phuong_phap").loc[m, "k"])
+        bars = ax.bar(x + (i - 0.5) * w, vals[m], width=w * 0.94, color=col, hatch=hatch, edgecolor="white",
+                      linewidth=0.6, label=f"{m} (gắn cờ khi ≥ {k} phút vượt ngưỡng)")
+        for r, v in zip(bars, vals[m]):
+            ax.text(r.get_x() + r.get_width() / 2, v + 0.015, f"{100 * v:.0f} %", ha="center", fontsize=8.5,
+                    color="#374151")
+    ax.set(xticks=x, ylim=(0, 1.12), ylabel="Tỉ lệ lô bị gắn cờ",
+           title="Giám sát – lô cần kiểm tra trên Phase II: báo sai thấp, bắt lỗi giả lập (15 phút, 2 sd)")
+    ax.set_xticklabels(groups, fontsize=8.5)
+    ax.yaxis.set_major_formatter(matplotlib.ticker.PercentFormatter(1.0))
+    ax.legend(loc="upper left")
+    return _save(fig, out, "fig02_t2_bat_loi.png")
