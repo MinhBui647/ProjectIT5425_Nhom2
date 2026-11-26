@@ -1,0 +1,9 @@
+**
+!requirements.txt
+!infra
+infra/*
+!infra/requirements-storage.txt
+!infra/constraints-storage.txt
+!src
+!src/**
+**/__pycache__

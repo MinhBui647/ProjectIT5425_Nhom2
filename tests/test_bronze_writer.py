@@ -337,3 +337,79 @@ class TestReadBronzeFile:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+@pytest.mark.parametrize('absolute_input', [False, True])
+def test_verify_relative_root_matches_absolute_root(tmp_path, monkeypatch, absolute_input):
+    from lakehouse_storage.bronze_writer import ingest_multiple_files
+    monkeypatch.chdir(tmp_path)
+    root = Path('relative_bronze')
+    path = Path(write_bronze_batch(pl.DataFrame({'timestamp': ['2026-01-15']}),
+                                  'sensor_telemetry', root, validate_schema=False))
+    supplied = path.resolve() if absolute_input else path
+    relative = ingest_multiple_files('sensor_telemetry', [supplied], bronze_root=root)[0]
+    absolute = ingest_multiple_files('sensor_telemetry', [supplied], bronze_root=root.resolve())[0]
+    assert relative['verified'] is True
+    assert relative == absolute
+    assert relative['checksum'] == hashlib.sha256(path.read_bytes()).hexdigest()
+    assert relative['size_bytes'] == path.stat().st_size
+
+
+def test_verify_mixed_relative_root_keeps_containment_and_checksums(tmp_path, monkeypatch):
+    from lakehouse_storage.bronze_writer import ingest_multiple_files
+    monkeypatch.chdir(tmp_path)
+    root = Path('relative_bronze')
+    frame = pl.DataFrame({'timestamp': ['2026-01-15']})
+    good = Path(write_bronze_batch(frame, 'sensor_telemetry', root, validate_schema=False))
+    wrong_source = Path(write_bronze_batch(frame, 'mes_lims', root, validate_schema=False))
+    outside = Path(write_bronze_batch(frame, 'sensor_telemetry', 'outside', validate_schema=False))
+    link = good.parent / 'escape.parquet'
+    link.symlink_to(outside.resolve())
+    bad = Path(write_bronze_batch(frame, 'sensor_telemetry', root, validate_schema=False))
+    bad.with_suffix('.sha256').write_text('0' * 64)
+    missing = Path(write_bronze_batch(frame, 'sensor_telemetry', root, validate_schema=False))
+    missing.with_suffix('.sha256').unlink()
+    paths = [good, wrong_source, root / '..' / outside, link, bad, missing]
+    results = ingest_multiple_files('sensor_telemetry', paths, bronze_root=root)
+    assert len(results) == len(paths)
+    assert [r['verified'] for r in results] == [True, False, False, False, False, False]
+    assert 'does not belong' in results[1]['error']
+    assert all('error' in results[i] for i in (2, 3))
+    assert verify_checksum(good)
+
+
+@pytest.mark.parametrize(('value', 'partition'), [
+    ('15/01/2026', '2026-01-15'), ('01/15/2026', '2026-01-15'),
+    ('01/02/2026', '2026-02-01'), ('2026-01-15T10:00:00Z', '2026-01-15'),
+    ('2026-01-15', '2026-01-15'), ('31/02/2026', '2030-12-02'),
+    (None, '2030-12-02'), (datetime(2026, 1, 15, 10), '2026-01-15'),
+    (datetime(2026, 1, 15).date(), '2026-01-15'),
+])
+def test_raw_date_formats_choose_partition_without_changing_payload(tmp_path, monkeypatch, value, partition):
+    from lakehouse_storage import bronze_writer
+    class FrozenDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return cls(2030, 12, 2, 12, tzinfo=timezone.utc)
+    if not isinstance(value, datetime):
+        monkeypatch.setattr(bronze_writer, 'datetime', FrozenDatetime)
+    frame = pl.DataFrame({'timestamp': [value]})
+    path = Path(write_bronze_batch(frame, 'sensor_telemetry', tmp_path, validate_schema=False))
+    assert path.parent.name == partition
+    assert pl.read_parquet(path).equals(frame)
+    assert verify_checksum(path)
+
+
+def test_empty_batch_still_rejected_before_publication(tmp_path):
+    with pytest.raises(ValueError, match='empty'):
+        write_bronze_batch(pl.DataFrame({'timestamp': []}), 'sensor_telemetry', tmp_path, validate_schema=False)
+    assert not list(tmp_path.rglob('*.parquet'))
+
+
+def test_usda_published_timestamp_uses_upstream_month_day_order(tmp_path):
+    import polars as pl
+    from lakehouse_storage.bronze_writer import write_bronze_batch
+    frame = pl.DataFrame({'published_date': ['01/02/2026 09:30:00'], 'section': ['prices']})
+    path = write_bronze_batch(frame, 'market_reports', tmp_path, validate_schema=False)
+    assert '/2026-01-02/' in path
+    assert pl.read_parquet(path)['published_date'][0] == '01/02/2026 09:30:00'

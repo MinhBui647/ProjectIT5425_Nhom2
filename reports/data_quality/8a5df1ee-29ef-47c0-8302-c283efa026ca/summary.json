@@ -1,0 +1,152 @@
+{
+  "run_id": "8a5df1ee-29ef-47c0-8302-c283efa026ca",
+  "table_name": "market_prices",
+  "contract_version": "v1",
+  "bronze": {
+    "absolute_path": "/w/data/01_bronze_vault/market_prices/2025-06-17/market_prices_20261124_152416_682290.parquet",
+    "sha256": "164155ff6e9f66ecc276691ae875fa956983bb9f3643658369f73f585f8ee5d5",
+    "table_name": "market_prices",
+    "row_count": 36,
+    "source_timestamp": "2026-11-24T15:24:16.682290+00:00"
+  },
+  "started_at": "2026-11-24T20:54:26.505979+00:00",
+  "finished_at": "2026-11-24T20:54:26.612040+00:00",
+  "counts": {
+    "total": 36,
+    "valid": 36,
+    "rejected": 0
+  },
+  "error_ratio": 0.0,
+  "decision": {
+    "status": "PASS",
+    "error_ratio": 0.0,
+    "reason": "All rows passed quality checks",
+    "fail_threshold": 0.005,
+    "valid_row_count": 36,
+    "rejected_row_count": 0,
+    "hard_failure_count": 0
+  },
+  "hard_failures": [],
+  "rule_metrics": {
+    "market_prices.non_empty.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "A governance batch must contain at least one row",
+      "passed": true,
+      "row_count": 36
+    },
+    "market_prices.required_columns.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "All required canonical columns must exist",
+      "passed": true,
+      "required_columns": [
+        "source",
+        "product",
+        "observed_at",
+        "currency",
+        "ingested_at"
+      ],
+      "missing_columns": []
+    },
+    "market_prices.canonical_types.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "Canonical columns must use their v1 data types",
+      "passed": true,
+      "type_mismatches": {}
+    },
+    "gdt.source.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "source must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.product.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "product must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.observed_at.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "observed_at must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.price.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "price must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.currency.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "currency must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.source_product_observed_at_contract.unique.v1": {
+      "dimension": "uniqueness",
+      "severity": "ERROR",
+      "description": "Business key ('source', 'product', 'observed_at', 'contract') must be unique",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.product.category.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "product must be one of ('WMP', 'SMP', 'AMF')",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.price.positive.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "GDT price must be positive",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.source.constant.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "source must equal GDT",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.currency.constant.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "currency must equal USD",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "gdt.unit.constant.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "unit must equal metric_ton",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    }
+  },
+  "artifacts": {
+    "quarantine": null,
+    "quarantine_sha256": null
+  }
+}

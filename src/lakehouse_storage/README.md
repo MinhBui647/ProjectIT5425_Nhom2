@@ -1,3 +1,20 @@
+# Lakehouse workflow đến Silver
+
+Luồng mới chạy bằng [Airflow](../../docs/lakehouse_airflow.md): mock S1–S5 →
+Bronze immutable → P3 gate → sáu Delta Silver tables → pinned version manifest.
+USDA chỉ Bronze; Gold là backlog. CLI dùng cùng callable với DAG, có thể chạy
+độc lập để tách lỗi xử lý dữ liệu và lỗi điều phối.
+
+Bắt đầu tại [demo](../../docs/storage_demo.md), [mock](../../docs/mock_server.md),
+[API](API_REFERENCE.md), [vận hành](../../docs/storage_operations.md),
+[versioning](../../docs/data_versioning.md),
+[giải thích toàn bộ code task](../../docs/lakehouse_code_walkthrough.md).
+
+## Hướng dẫn nền và lịch sử trước Airflow
+
+Phần scheduler cũ dưới đây dành cho image trước cutover; runtime hiện hành dùng
+maintenance_cli và Airflow, không chạy đồng thời hai bộ lịch cùng target.
+
 # 🥛 Lakehouse Storage Module
 
 > **Smart Dairy Factory Lakehouse Core Engine**  
@@ -25,7 +42,8 @@ flowchart LR
     end
 
     Nguồn -- write_bronze_batch --> Bronze
-    Bronze -- ingest_bronze_file --> Silver
+    Bronze -- ingest_governed_bronze_file --> P3[P3 quality gate]
+    P3 --> Silver
 
     style Nguồn fill:#f9f9f9,stroke:#333,stroke-width:1px
     style Bronze fill:#cd7f32,stroke:#333,stroke-width:2px,color:#fff
@@ -36,68 +54,109 @@ flowchart LR
 
 ## ⚡ Quick Start (Copy & Paste)
 
-Dưới đây là kịch bản hoàn chỉnh (end-to-end) từ việc sinh dữ liệu giả lập, ghi vào Bronze, đưa lên Silver cho tới truy vấn dữ liệu và truy vết ISO 22000.
+Luồng chính cho dữ liệu dùng với Gold là generator → Bronze → P3 → Silver.
+Cài dependencies P3 theo `requirements.txt` và bộ pin dịch vụ nếu cần. Chọn roots
+riêng; local Delta trong môi trường này nên dùng đường dẫn tuyệt đối không có dấu cách.
+
+```bash
+PYTHONPATH=src .venv/bin/python -m lakehouse_storage.mock_sensor_stream \
+  --batches 1 --samples 20 --seed 42 \
+  --bronze-root /tmp/storage_generator/bronze \
+  --silver-root /tmp/storage_generator/silver \
+  --reports-root /tmp/storage_generator/reports
+
+PYTHONPATH=src .venv/bin/python -m lakehouse_storage.generate_mes_data \
+  --days 1 --date 2026-01-15 --seed 5425 --defect-rate 0 --write-delta \
+  --bronze-root /tmp/storage_production/bronze \
+  --silver-root /tmp/storage_production/silver \
+  --reports-root /tmp/storage_production/reports \
+  --output-dir /tmp/storage_production/synthetic
+```
+
+`--silver-root` hoặc `STORAGE_GENERATOR_SILVER_ROOT` bắt buộc khi CLI ghi Delta.
+`STORAGE_GENERATOR_BRONZE_ROOT` và `STORAGE_GENERATOR_REPORTS_ROOT` cung cấp default
+cho hai roots còn lại. CLI in toàn bộ kết quả P3; FAIL/infrastructure error trả
+exit code 1. Gate giữ threshold 0.005; dữ liệu mock có thể bị từ chối.
+
+### Bộ sinh MES/cảm biến theo cơ chế mô phỏng
+
+CLI MES mặc định sinh **hai dây chuyền** trong config: 8 lô và 57.600 mẫu
+cảm biến mỗi ngày. Truyền `--line-id LINE_UHT_1` để giữ khối lượng một line
+như trước; có thể truyền danh sách line phân cách bằng dấu phẩy.
+
+| Cờ ghi | Hành vi |
+|---|---|
+| Không có cờ | Parquet tổng hợp theo tên tháng trong `--output-dir` |
+| `--write-bronze` | Append Parquet + checksum vào `--bronze-root`, chưa chạy P3 |
+| `--write-delta` | Bronze → P3 → Silver tại `--silver-root`; bị từ chối trả mã 1 |
+
+Hai cờ ghi loại trừ nhau. Cả ba chế độ lưu `batch_farm_map.json` trong
+`--output-dir`, gộp mapping cũ theo batch ID và chặn conflict/JSON hỏng.
+Mapping được thay qua file tạm; chỉ chạy một writer cho cùng output directory.
+Sau publish Bronze, mapping được lưu trước P3; khi P3 reject, Bronze/mapping
+và các commit Silver trước đó vẫn được giữ. Đây không phải transaction hai bảng.
+
+Các hệ số defect, yield, flow và power được ghi tại
+[ground_truth.md](../../docs/ground_truth.md). Seed ngày đầu mặc định 5425;
+ngày sau tăng 1, seed 0 hợp lệ. Khi sinh tiếp bằng lệnh riêng, phải tăng seed
+đúng offset ngày. Bảo đảm tách seed được kiểm tra cho bộ 180 ngày và hai line;
+không có bảo đảm seed duy nhất cho mọi khoảng ngày hoặc line tùy ý. Giá trị
+theo seed và phân phối MES đổi so với generator cũ, trong khi schema và lời gọi
+cũ được giữ. `_generated_at` tiếp tục dùng thời gian thực.
+
+Ví dụ Linux/WSL để sinh và kiểm tra **file Bronze thực** trong root riêng:
+
+```bash
+mes_demo_root=$(mktemp -d /tmp/mes-production-XXXXXX)
+PYTHONPATH=src .venv/bin/python -m lakehouse_storage.generate_mes_data \
+  --date 2025-01-01 --days 1 --seed 5425 --write-bronze \
+  --bronze-root "$mes_demo_root/bronze" --output-dir "$mes_demo_root/synthetic"
+PYTHONPATH=src .venv/bin/python scripts/verify_mes_dataset.py \
+  --bronze-root "$mes_demo_root/bronze" \
+  --mapping-file "$mes_demo_root/synthetic/batch_farm_map.json" \
+  --start-date 2025-01-01 --days 1 --seed 5425 --output "$mes_demo_root/acceptance.json"
+```
+
+Verifier đọc từng file và giữ thống kê theo lô để kiểm checksum, schema,
+counts, batch IDs, chuỗi timestamp 1 Hz và farm mapping; PASS là nghiệm thu
+Bronze mô phỏng, chưa phải P3/Gold. `--seed` của verifier là thông tin khai báo,
+không được suy ngược từ Parquet. File report phải nằm ngoài Bronze và khác
+file mapping. Đổi `--days 180` ở cả hai lệnh để nghiệm thu bộ 1.440 lô.
+
+Bronze chỉ append; chạy lại cùng window không phải replay/dedup. Dùng namespace
+mới khi sinh lại cơ chế; không tự đổi nguồn Silver/Gold của nhóm. Gold hiện đọc
+mapping mặc định `data/synthetic/batch_farm_map.json`; custom output cần được
+truyền qua `load_batch_farm_map(path=...)` trong quy trình dựng marts.
+Raw export vẫn dùng tên tháng bắt đầu và có thể bị ghi đè khi chạy lại; bộ dài
+nên dùng Bronze streaming. Bronze writer hiện dùng filesystem POSIX, nên
+native Windows chưa được nghiệm thu. Mock server/Airflow vẫn dùng generator
+cảm biến riêng; chúng chưa có toàn bộ quan hệ cơ chế của daily CLI.
+
+Entry point tương ứng cho một file Bronze đã có:
 
 ```python
-import polars as pl
-from lakehouse_storage import (
-    generate_sensor_batch,
-    write_bronze_batch,
-    get_silver_table_uri,
-    get_partition_columns,
-    ingest_bronze_file,
-    read_silver_table,
-    load_version,
-    trace_batch,
+from lakehouse_storage import ingest_governed_bronze_file, trace_batch
+from olap_engineering.build_marts import scan_silver
+
+result = ingest_governed_bronze_file(
+    bronze_path, "sensor_telemetry",
+    bronze_root="/tmp/storage_generator/bronze",
+    silver_root="/tmp/storage_generator/silver",
+    reports_root="/tmp/storage_generator/reports",
 )
-
-# -----------------------------------------------------------------------------
-# Bước 1: Sinh dữ liệu mẫu & Ghi vào tầng Bronze (Raw Landing - Bất biến)
-# -----------------------------------------------------------------------------
-df_raw = generate_sensor_batch(
-    n_samples=10, 
-    line_id="LINE_UHT_1", 
-    batch_id="BATCH_20260115_01"
-)
-
-# Tự động tạo thư mục theo ngày & ghi Parquet kèm SHA-256 sidecar
-bronze_file_path = write_bronze_batch(df_raw, "sensor_telemetry")
-print(f"✅ [Bronze] File đã lưu: {bronze_file_path}")
-
-# -----------------------------------------------------------------------------
-# Bước 2: Ingest từ Bronze lên Silver (Delta Lake trên MinIO - ACID)
-# -----------------------------------------------------------------------------
-table_name = "sensor_telemetry"
-silver_uri = get_silver_table_uri(table_name)
-partition_cols = get_partition_columns(table_name)
-
-# Verify SHA-256, cast schema, append lineage & ghi ACID
-ingest_result = ingest_bronze_file(
-    bronze_path=bronze_file_path,
-    silver_table_uri=silver_uri,
-    partition_by=partition_cols,
-    table_name=table_name
-)
-print(f"✅ [Silver] Đã nạp thành công: {ingest_result['rows_ingested']} dòng")
-
-# -----------------------------------------------------------------------------
-# Bước 3: Đọc và truy vấn bảng Silver
-# -----------------------------------------------------------------------------
-df_silver = read_silver_table(silver_uri, line_id="LINE_UHT_1", limit=5)
-print("\n📊 Dữ liệu Silver:")
-print(df_silver.select(["timestamp", "line_id", "uht_temp", "flow_rate"]))
-
-# -----------------------------------------------------------------------------
-# Bước 4: Time Travel & Truy vết nguồn gốc (ISO 22000 Traceability)
-# -----------------------------------------------------------------------------
-# Xem lại trạng thái lịch sử
-df_v1 = load_version(silver_uri, version=1)
-
-# Kiểm toán nguồn gốc của một lô (Batch)
-audit = trace_batch(silver_uri, batch_id="BATCH_20260115_01")
-print(f"\n🔍 ISO 22000 - File gốc: {audit['lineage']['bronze_file']}")
-print(f"🔍 ISO 22000 - Toàn vẹn dữ liệu: {audit['integrity_verified']}")
+if result["status"] not in {"PASS", "PASS_WITH_REJECTIONS", "SKIPPED_DUPLICATE"}:
+    raise RuntimeError(result)
+accepted = scan_silver("sensor_telemetry", "/tmp/storage_generator/silver").collect()
 ```
+
+Replay cùng file dùng gate chống trùng hiện có của P3. Đây là đường ghi tuần tự;
+không đảm bảo exactly-once giữa nhiều process. Bảng legacy thiếu governance bị
+báo lỗi, không tự migrate hoặc tự gắn PASS. Adapter demo vẫn giới hạn namespace.
+
+Các helper `write_sensor_batch`, `write_mes_batch`, `_write_sensor_to_delta`,
+`ingest_bronze_file` và `append_to_delta` là API storage low-level tương thích:
+chúng có thể ghi lineage nhưng không chạy quality gate. Dữ liệu từ những helper
+này chưa đảm bảo điều kiện Gold. Demo storage thuần chỉ nên dùng target riêng.
 
 ---
 
@@ -146,4 +205,22 @@ BRONZE_PATH=data/01_bronze_vault
 
 > [!TIP]  
 > Mọi hàm public, cấu trúc tham số, và các ngoại lệ (Exception) đều được tài liệu hóa chi tiết tại:  
-> 👉 **[API_REFERENCE.md](file:///home/kh0ngm1nh/Documents/HUST/20261/Data%20management%20and%20visualization%20-%20IT5425/Project/ProjectIT5425_Nhom2/src/lakehouse_storage/API_REFERENCE.md)**
+> 👉 **[API_REFERENCE.md](API_REFERENCE.md)**
+
+## Isolated storage services and benchmark (2026-11-17)
+
+The optional demo adds persisted S1/S2 mock HTTP, one checkpointed worker through
+P3, a UTC maintenance scheduler, and measured layout benchmarks with four charts.
+Start with [the walkthrough](../../docs/storage_demo.md),
+[operations](../../docs/storage_operations.md),
+[benchmark commands](../../docs/storage_benchmark.md).
+Benchmark output is generated locally for each run; measured results depend on
+the environment and are not included in the repository.
+
+Install service dependencies with the separate pinned constraints; core imports,
+writer signatures, Silver schemas/partitions and shared URIs remain compatible.
+The worker is sequential and local. It reuses known Bronze files; uncertainty in
+PUBLISHING stops at NEEDS_REVIEW. PROCESSING retries use P3's existing duplicate
+gate and do not infer pre-crash row counts. There is no distributed exactly-once
+claim. Stop ingestion before enabling maintenance. Vacuum is preview-only with
+>=168-hour retention enforcement. No metadata contract was changed.

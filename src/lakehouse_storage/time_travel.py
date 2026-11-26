@@ -52,7 +52,7 @@ def diff_versions(
     table_uri: str,
     v1: int,
     v2: int,
-    id_column: str | None = None,
+    id_column: str | list[str] | tuple[str, ...] | None = None,
 ) -> dict:
     """Compare two versions and return differences.
 
@@ -60,36 +60,54 @@ def diff_versions(
         table_uri: S3 URI of the Delta table
         v1: First version number
         v2: Second version number
-        id_column: Primary key column (auto-detected if not provided)
+        id_column: Entity key column(s), auto-detected from Silver columns.
+            Null or duplicate keys raise ValueError. Updates sharing a key are
+            not reported as additions/removals.
     """
     df_v1 = load_version(table_uri, v1)
     df_v2 = load_version(table_uri, v2)
 
-    # Auto-detect ID column if not provided. Prefer temporal keys and skip
-    # columns that are entirely NULL (e.g. batch_id before MES backfill).
+    # Use Silver entity identities rather than raw Bronze registry keys.
     if id_column is None:
-        candidates = [
-            "timestamp", "observed_at", "period_start",
-            "batch_id", "recall_id", "file",
+        silver_keys = [
+            ['line_id', 'timestamp'], ['farm_id', 'observed_at'],
+            ['source', 'product', 'contract', 'observed_at', 'currency', 'unit'],
+            ['source', 'index_name', 'period_start'], ['source', 'recall_id'],
         ]
-        for col in candidates:
-            if col in df_v1.columns and df_v1[col].null_count() < df_v1.height:
-                id_column = col
+        # A bare batch_id on an unknown frame does not identify a MES table.
+        if {'batch_id', 'line_id', 'sku_id'}.issubset(df_v1.columns):
+            silver_keys.append(['batch_id'])
+        if {'file', 'sha256'}.issubset(df_v1.columns):
+            silver_keys.append(['file'])
+        for keys in silver_keys:
+            if all(key in df_v1.columns and key in df_v2.columns for key in keys):
+                id_column = keys[0] if len(keys) == 1 else keys
                 break
         else:
+            candidates = ['timestamp', 'observed_at', 'period_start', 'batch_id', 'recall_id', 'file']
+            candidates += [col for col in df_v1.columns if col not in candidates]
             id_column = next(
-                (c for c in df_v1.columns if df_v1[c].null_count() < df_v1.height),
-                df_v1.columns[0],
+                (col for col in candidates if col in df_v1.columns and
+                 df_v1[col].null_count() < df_v1.height),
+                df_v1.columns[0] if df_v1.columns else None,
             )
+            logger.warning('Unknown Silver shape; pass id_column explicitly (fallback: %s)', id_column)
 
-    if id_column not in df_v1.columns:
-        raise ValueError(f"ID column '{id_column}' not found in table")
+    keys = [id_column] if isinstance(id_column, str) else list(id_column or [])
+    if not keys or any(not isinstance(key, str) for key in keys) or len(set(keys)) != len(keys):
+        raise ValueError('Key columns must be a non-empty sequence of distinct names')
+    for version, frame in ((v1, df_v1), (v2, df_v2)):
+        missing = [key for key in keys if key not in frame.columns]
+        if missing:
+            raise ValueError(f'Key columns not found in version {version}: {missing}')
+        key_frame = frame.select(keys)
+        if any(key_frame.null_count().row(0)):
+            raise ValueError(f'Null key values in version {version}: {keys}')
+        if key_frame.is_duplicated().any():
+            raise ValueError(f'Duplicate key values in version {version}: {keys}')
 
-    v1_ids = set(df_v1.select(id_column).to_series().to_list())
-    v2_ids = set(df_v2.select(id_column).to_series().to_list())
-
-    added = df_v2.filter(~pl.col(id_column).is_in(v1_ids))
-    removed = df_v1.filter(~pl.col(id_column).is_in(v2_ids))
+    added = df_v2.join(df_v1.select(keys), on=keys, how='anti', maintain_order='left')
+    removed = df_v1.join(df_v2.select(keys), on=keys, how='anti', maintain_order='left')
 
     return {
         "added": added,
@@ -124,28 +142,53 @@ def trace_batch(table_uri: str, batch_id: str, id_column: str = "batch_id") -> d
     if "_bronze_file" not in batch.columns:
         raise ValueError("Lineage column _bronze_file not found")
 
-    bronze_file = batch.select("_bronze_file").to_series()[0]
-    bronze_sha256 = batch.select("_bronze_sha256").to_series()[0]
-    ingested_at = batch.select("_ingested_at").to_series()[0]
+    sources = []
+    hashes_by_path = {}
+    for path, expected in batch.select("_bronze_file", "_bronze_sha256").iter_rows():
+        hashes_by_path.setdefault(path, set()).add(expected)
 
-    integrity_verified = False
-    actual_sha256 = None
+    actual_by_path = {}
+    for row in batch.select("_bronze_file", "_bronze_sha256", "_ingested_at").unique(
+        subset=["_bronze_file", "_bronze_sha256"], maintain_order=True
+    ).iter_rows(named=True):
+        path, expected = row["_bronze_file"], row["_bronze_sha256"]
+        actual, reason = None, None
+        if path not in actual_by_path:
+            try:
+                if not path:
+                    reason = "missing_path"
+                elif not Path(path).is_file():
+                    reason = "missing_file"
+                else:
+                    actual = sha256_file(Path(path))
+            except OSError as exc:
+                reason = f"unreadable_file: {exc}"
+            actual_by_path[path] = (actual, reason)
+        actual, reason = actual_by_path[path]
+        if len(hashes_by_path[path]) > 1:
+            reason = "conflicting_expected_hashes"
+        elif not expected:
+            reason = reason or "missing_expected_hash"
+        elif actual != expected:
+            reason = reason or "checksum_mismatch"
+        sources.append({
+            "bronze_file": path,
+            "bronze_sha256": expected,
+            "actual_sha256": actual,
+            "ingested_at": str(row["_ingested_at"]) if row["_ingested_at"] else None,
+            "integrity_verified": reason is None,
+            "reason": reason,
+        })
 
-    bronze_path = Path(bronze_file)
-    if bronze_path.exists():
-        actual_sha256 = sha256_file(bronze_path)
-        integrity_verified = actual_sha256 == bronze_sha256
-
+    representative = sources[0]
     return {
         "batch_id": batch_id,
         "batch_info": batch.to_dict(as_series=False),
-        "lineage": {
-            "bronze_file": bronze_file,
-            "bronze_sha256": bronze_sha256,
-            "actual_sha256": actual_sha256,
-            "ingested_at": str(ingested_at) if ingested_at else None,
-        },
-        "integrity_verified": integrity_verified,
+        "lineage": {key: representative[key] for key in (
+            "bronze_file", "bronze_sha256", "actual_sha256", "ingested_at"
+        )},
+        "lineage_sources": sources,
+        "integrity_verified": all(source["integrity_verified"] for source in sources),
     }
 
 
@@ -224,16 +267,17 @@ def get_latest_version(table_uri: str) -> int:
 
 
 def get_version_at_date(table_uri: str, target_date: str) -> int | None:
-    """Get Delta version that was current at a specific date."""
-    target = datetime.fromisoformat(target_date).replace(tzinfo=timezone.utc)
+    """Get the latest eligible commit; naive target timestamps mean UTC."""
+    target = _parse_timestamp(target_date)
     dt = _get_delta_table(table_uri)
     history = dt.history()
 
-    for entry in reversed(history):
-        commit_ts = _parse_timestamp(entry["timestamp"])
-        if commit_ts <= target:
-            return entry["version"]
-    return None
+    eligible = [
+        (_parse_timestamp(entry["timestamp"]), entry["version"])
+        for entry in history
+        if _parse_timestamp(entry["timestamp"]) <= target
+    ]
+    return max(eligible)[1] if eligible else None
 
 
 def _get_delta_table(table_uri: str) -> "DeltaTable":
@@ -273,4 +317,5 @@ def _parse_timestamp(value) -> datetime:
         return value if value.tzinfo else value.replace(tzinfo=timezone.utc)
     if isinstance(value, (int, float)):
         return datetime.fromtimestamp(value / 1000.0, tz=timezone.utc)
-    return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)

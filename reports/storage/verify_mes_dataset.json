@@ -1,0 +1,13 @@
+{
+  "status": "FAIL",
+  "check": "synthetic_bronze_acceptance",
+  "error": "unexpected number of mes_lims files: 720",
+  "revision": "unknown",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+  "python": "3.12.16",
+  "numpy": "1.26.4",
+  "polars": "2.1.0",
+  "verified_at": "2026-11-24T16:30:05.617506+00:00",
+  "generator_sha256": "9472d0da1155c46bd65308ef982da8a41824ce577b6e3e41089b9c0a859d6bf8",
+  "verifier_sha256": "3f3d01edd8cff494ef05af7c0deabc1135b552c0b1138e6cb2fff431c7d1ee48"
+}

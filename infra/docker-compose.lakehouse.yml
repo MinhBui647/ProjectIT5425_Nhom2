@@ -1,0 +1,162 @@
+name: smart-dairy-lakehouse
+x-airflow: &airflow
+  image: smart-dairy-airflow:workflow
+  build:
+    context: ..
+    dockerfile: infra/Dockerfile.airflow
+    network: host
+  init: true
+  user: '${AIRFLOW_UID:-50000}:0'
+  environment: &airflow-env
+    AIRFLOW__CORE__EXECUTOR: LocalExecutor
+    AIRFLOW__CORE__LOAD_EXAMPLES: 'false'
+    AIRFLOW__CORE__DAGS_FOLDER: /opt/airflow/dags
+    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:${LAKEHOUSE_DB_PASSWORD:-lakehouse-demo-only}@postgres/airflow
+    AIRFLOW__CORE__EXECUTION_API_SERVER_URL: http://airflow-api:8080/execution/
+    AIRFLOW__API_AUTH__JWT_SECRET: ${LAKEHOUSE_JWT_SECRET:-lakehouse-demo-jwt-local-only}
+    AIRFLOW__API__SECRET_KEY: ${LAKEHOUSE_API_SECRET:-lakehouse-demo-api-local-only}
+    AIRFLOW__CORE__SIMPLE_AUTH_MANAGER_ALL_ADMINS: 'true'
+    AIRFLOW__SCHEDULER__ENABLE_HEALTH_CHECK: 'true'
+    AIRFLOW__CORE__PARALLELISM: '2'
+    AIRFLOW__LOGGING__LOGGING_LEVEL: INFO
+    AIRFLOW__DAG_PROCESSOR__REFRESH_INTERVAL: '10'
+    AIRFLOW__DAG_PROCESSOR__MIN_FILE_PROCESS_INTERVAL: '5'
+    PYTHONPATH: /opt/project/src:/opt/project/tests
+    PROCESSING_PYTHON: /opt/processing/bin/python
+    POLARS_MAX_THREADS: '2'
+    OPENBLAS_NUM_THREADS: '1'
+    MPLCONFIGDIR: /tmp/matplotlib
+    STORAGE_DEMO_ROOT: /opt/lakehouse/storage_demo
+    STORAGE_DEMO_SILVER_ROOT: s3://smart-dairy-storage-demo/storage_demo/workflow/silver
+    STORAGE_DEMO_SILVER_ALLOW_ROOT: s3://smart-dairy-storage-demo/storage_demo/workflow
+    MINIO_ENDPOINT: minio:9000
+    MINIO_ACCESS_KEY: storagedemo
+    MINIO_SECRET_KEY: ${STORAGE_DEMO_MINIO_PASSWORD:-storage-demo-local-only}
+    MOCK_URL: http://mock:8010
+    MAINTENANCE_ENABLED: ${MAINTENANCE_ENABLED:-false}
+    MAINTENANCE_INGESTION_STOPPED: ${MAINTENANCE_INGESTION_STOPPED:-false}
+    MAINTENANCE_FILE_THRESHOLD: ${MAINTENANCE_FILE_THRESHOLD:-2}
+    MAINTENANCE_COOLDOWN_SECONDS: ${MAINTENANCE_COOLDOWN_SECONDS:-3600}
+    LAKEHOUSE_CRON_UTC: ${LAKEHOUSE_CRON_UTC:-}
+    MAINTENANCE_CRON_UTC: ${MAINTENANCE_CRON_UTC:-}
+    LAKEHOUSE_CODE_REVISION: ${LAKEHOUSE_CODE_REVISION:-unknown}
+    LAKEHOUSE_IMAGE_ID: ${LAKEHOUSE_IMAGE_ID:-smart-dairy-airflow:workflow}
+  volumes:
+    - runtime:/opt/lakehouse/storage_demo
+    - logs:/opt/airflow/logs
+  depends_on:
+    postgres: {condition: service_healthy}
+    minio: {condition: service_healthy}
+    mock: {condition: service_healthy}
+  stop_grace_period: 90s
+services:
+  volume-init:
+    image: smart-dairy-airflow:workflow
+    user: '0:0'
+    entrypoint: []
+    environment:
+      AIRFLOW_UID: '${AIRFLOW_UID:-50000}'
+    command: ['bash', '-c', 'chown -R "$${AIRFLOW_UID}:0" /opt/lakehouse/storage_demo /opt/airflow/logs && chmod -R g+rwX /opt/lakehouse/storage_demo /opt/airflow/logs']
+    volumes:
+      - runtime:/opt/lakehouse/storage_demo
+      - payloads:/opt/lakehouse/storage_demo/mock
+      - logs:/opt/airflow/logs
+  postgres:
+    image: postgres:18.1
+    environment:
+      POSTGRES_USER: airflow
+      POSTGRES_PASSWORD: ${LAKEHOUSE_DB_PASSWORD:-lakehouse-demo-only}
+      POSTGRES_DB: airflow
+    volumes:
+      - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U airflow -d airflow']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  minio:
+    image: bitnamilegacy/minio@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
+    environment:
+      MINIO_ROOT_USER: storagedemo
+      MINIO_ROOT_PASSWORD: ${STORAGE_DEMO_MINIO_PASSWORD:-storage-demo-local-only}
+      MINIO_DEFAULT_BUCKETS: smart-dairy-storage-demo
+    volumes:
+      - minio:/bitnami/minio/data
+    ports:
+      - '127.0.0.1:${LAKEHOUSE_MINIO_PORT:-29000}:9000'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/ready']
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  mock:
+    image: smart-dairy-airflow:workflow
+    init: true
+    user: '${AIRFLOW_UID:-50000}:0'
+    environment:
+      STORAGE_DEMO_ROOT: /opt/lakehouse/storage_demo
+      MOCK_HOST: 0.0.0.0
+      MOCK_PORT: '8010'
+      POLARS_MAX_THREADS: '2'
+    entrypoint: []
+    command: ['/opt/processing/bin/python', '-m', 'lakehouse_storage.mock_server']
+    depends_on:
+      volume-init: {condition: service_completed_successfully}
+    volumes:
+      - payloads:/opt/lakehouse/storage_demo/mock
+    ports:
+      - '127.0.0.1:${LAKEHOUSE_MOCK_PORT:-28010}:8010'
+    healthcheck:
+      test: ['CMD', '/opt/processing/bin/python', '-c', "import urllib.request; urllib.request.urlopen('http://localhost:8010/health', timeout=2)"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+  airflow-init:
+    <<: *airflow
+    depends_on:
+      volume-init: {condition: service_completed_successfully}
+      postgres: {condition: service_healthy}
+      minio: {condition: service_healthy}
+      mock: {condition: service_healthy}
+    entrypoint: []
+    command: ['python', '/opt/project/infra/init_airflow.py']
+  airflow-api:
+    <<: *airflow
+    command: ['api-server']
+    ports:
+      - '127.0.0.1:${LAKEHOUSE_AIRFLOW_PORT:-28080}:8080'
+    depends_on:
+      airflow-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/api/v2/monitor/health']
+      interval: 5s
+      timeout: 5s
+      retries: 40
+  airflow-scheduler:
+    <<: *airflow
+    command: ['scheduler']
+    depends_on:
+      airflow-init: {condition: service_completed_successfully}
+      airflow-api: {condition: service_healthy}
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8974/health']
+      interval: 5s
+      timeout: 5s
+      retries: 40
+  airflow-dag-processor:
+    <<: *airflow
+    command: ['dag-processor']
+    depends_on:
+      airflow-init: {condition: service_completed_successfully}
+    healthcheck:
+      test: ['CMD-SHELL', 'airflow jobs check --job-type DagProcessorJob --hostname "$${HOSTNAME}"']
+      interval: 10s
+      timeout: 10s
+      retries: 30
+volumes:
+  runtime:
+  logs:
+  postgres:
+  payloads:
+  minio:

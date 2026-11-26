@@ -247,3 +247,33 @@ class TestTraceability:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+@pytest.mark.parametrize(('target', 'expected'), [
+    ('2026-01-15T09:59:59Z', None),
+    ('2026-01-15T10:00:00Z', 0),
+    ('2026-01-15T10:01:30Z', 2),
+    ('2026-01-15T10:03:00Z', 3),
+    ('2026-01-15T17:01:30+07:00', 2),
+    ('2026-01-15T10:01:30', 2),
+])
+def test_version_lookup_latest_eligible(monkeypatch, target, expected):
+    from lakehouse_storage import time_travel
+    from types import SimpleNamespace
+    base = int(datetime(2026, 1, 15, 10, tzinfo=timezone.utc).timestamp() * 1000)
+    history = [{'version': v, 'timestamp': base + ms} for v, ms in [(3, 120000), (2, 60000), (1, 60000), (0, 0)]]
+    monkeypatch.setattr(time_travel, '_get_delta_table', lambda _: SimpleNamespace(history=lambda: history))
+    assert time_travel.get_version_at_date('unused', target) == expected
+
+
+def test_version_lookup_real_delta(tmp_path):
+    from deltalake import DeltaTable, write_deltalake
+    from lakehouse_storage.config import get_storage_options
+    from lakehouse_storage.time_travel import get_version_at_date
+    uri = str(tmp_path / 'history')
+    for i in range(3):
+        write_deltalake(uri, pl.DataFrame({'id': [i]}).to_arrow(), mode='append', storage_options=get_storage_options())
+    history = DeltaTable(uri, storage_options=get_storage_options()).history()
+    last = max(h['timestamp'] for h in history)
+    moment = datetime.fromtimestamp(last / 1000, tz=timezone.utc).isoformat()
+    assert get_version_at_date(uri, moment) == 2

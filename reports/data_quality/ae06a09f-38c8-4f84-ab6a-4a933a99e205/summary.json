@@ -1,0 +1,126 @@
+{
+  "run_id": "ae06a09f-38c8-4f84-ab6a-4a933a99e205",
+  "table_name": "market_indices",
+  "contract_version": "v1",
+  "bronze": {
+    "absolute_path": "/w/data/01_bronze_vault/market_indices/2025-01-01/market_indices_20261124_152417_941864.parquet",
+    "sha256": "45a4c39d95c2ae2a077adfa530b7d13f41e2e6228032aeaa74a4015442b3a24b",
+    "table_name": "market_indices",
+    "row_count": 6,
+    "source_timestamp": "2026-11-24T15:24:17.941864+00:00"
+  },
+  "started_at": "2026-11-24T20:54:26.882084+00:00",
+  "finished_at": "2026-11-24T20:54:26.993838+00:00",
+  "counts": {
+    "total": 36,
+    "valid": 36,
+    "rejected": 0
+  },
+  "error_ratio": 0.0,
+  "decision": {
+    "status": "PASS",
+    "error_ratio": 0.0,
+    "reason": "All rows passed quality checks",
+    "fail_threshold": 0.005,
+    "valid_row_count": 36,
+    "rejected_row_count": 0,
+    "hard_failure_count": 0
+  },
+  "hard_failures": [],
+  "rule_metrics": {
+    "market_indices.non_empty.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "A governance batch must contain at least one row",
+      "passed": true,
+      "row_count": 36
+    },
+    "market_indices.required_columns.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "All required canonical columns must exist",
+      "passed": true,
+      "required_columns": [
+        "source",
+        "index_name",
+        "period_start",
+        "ingested_at"
+      ],
+      "missing_columns": []
+    },
+    "market_indices.canonical_types.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "Canonical columns must use their v1 data types",
+      "passed": true,
+      "type_mismatches": {}
+    },
+    "fao.month_continuity.warning.v1": {
+      "dimension": "completeness",
+      "severity": "WARNING",
+      "description": "FAO month gaps are advisory unless continuity is required",
+      "passed": true,
+      "month_gaps": []
+    },
+    "fao.source.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "source must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.index_name.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "index_name must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.period_start.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "period_start must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.index_value.required.v1": {
+      "dimension": "completeness",
+      "severity": "ERROR",
+      "description": "index_value must not be null",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.source_index_name_period_start.unique.v1": {
+      "dimension": "uniqueness",
+      "severity": "ERROR",
+      "description": "Business key ('source', 'index_name', 'period_start') must be unique",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.index_value.positive.v1": {
+      "dimension": "validity",
+      "severity": "ERROR",
+      "description": "FAO index_value must be positive",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    },
+    "fao.source.constant.v1": {
+      "dimension": "consistency",
+      "severity": "ERROR",
+      "description": "source must equal FAO",
+      "failed_count": 0,
+      "passed_count": 36,
+      "failure_ratio": 0.0
+    }
+  },
+  "artifacts": {
+    "quarantine": null,
+    "quarantine_sha256": null
+  }
+}

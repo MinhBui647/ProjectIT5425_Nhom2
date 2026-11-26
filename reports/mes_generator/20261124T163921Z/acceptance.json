@@ -1,0 +1,32 @@
+{
+  "status": "PASS",
+  "check": "synthetic_bronze_acceptance",
+  "bronze_root": "/w/data/01_bronze_vault",
+  "mapping_file": "/w/data/synthetic/batch_farm_map.json",
+  "start_date": "2025-01-01",
+  "days": 180,
+  "lines": [
+    "LINE_UHT_1",
+    "LINE_UHT_2"
+  ],
+  "declared_seed": 5425,
+  "mes_files": 360,
+  "sensor_files": 360,
+  "checksums_verified": 720,
+  "mes_rows": 1440,
+  "sensor_rows": 10368000,
+  "batches": 1440,
+  "unique_quality_rows": 1440,
+  "defect_count": 68,
+  "defect_rate": 0.04722222222222222,
+  "fat_uht_correlation": -0.017450203244985394,
+  "silver_scope": "Not inspected by this Bronze verifier",
+  "revision": "unknown",
+  "platform": "Linux-6.18.58.1-microsoft-standard-WSL2-x86_64-with-glibc2.41",
+  "python": "3.12.16",
+  "numpy": "1.26.4",
+  "polars": "2.1.0",
+  "verified_at": "2026-11-24T16:41:36.474704+00:00",
+  "generator_sha256": "9472d0da1155c46bd65308ef982da8a41824ce577b6e3e41089b9c0a859d6bf8",
+  "verifier_sha256": "3f3d01edd8cff494ef05af7c0deabc1135b552c0b1138e6cb2fff431c7d1ee48"
+}
